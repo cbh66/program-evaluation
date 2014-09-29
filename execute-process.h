@@ -47,7 +47,7 @@ static inline ProgramInfo execute_process(std::string name, char *argv[],
 }
 
 
-static inline ProgramInfo execute_process(std::string name, char *argv,
+static inline ProgramInfo execute_process(std::string name, char *argv[],
                                           std::string input, std::string output,
                                           std::string errput)
 {

@@ -2,11 +2,11 @@
 MAINFILE=evaluate.cpp
 MAINOBJ=$(MAINFILE:.cpp=.o)
 CXX=g++
-CFLAGS=-c -Wall -Wextra
-LDFLAGS=-Wall -Wextra
+CFLAGS=-c -Wall -Wextra -g
+LDFLAGS=-Wall -Wextra -g
 
 all: $(MAINOBJ) execute-process.o
-	$(CXX) $(LDFLAGS) $(MAINOBJ) -lboost_program_options execute-process.o -o test
+	$(CXX) $(LDFLAGS) $(MAINOBJ) -lboost_program_options -lboost_filesystem -lboost_system execute-process.o -o test
 
 %.o: %.cpp
 	$(CXX) $(CFLAGS) $<
