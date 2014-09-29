@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
@@ -23,6 +24,7 @@ void evaluate(string name, vector<string> args,
               unsigned times, bool time, bool test);
 void get_io(vector<string> &inputs, vector<string> &outputs, string input_dir,
             string output_dir, string input_suffix, string output_suffix);
+bool compare(string file1, string file2);
 void print_results(ProgramInfo results);
 
 int main(int argc, char *argv[])
@@ -130,7 +132,9 @@ void get_files_by_suffix(vector<boost::filesystem::path> &output,
     fs::directory_iterator end;
     fs::directory_iterator i(".");
     if (dir != "") {
-        i = fs::directory_iterator(dir);
+        fs::path d(dir);
+        if (d.is_absolute()) i = fs::directory_iterator(d);
+        else i = fs::directory_iterator(fs::current_path() / d);
     }
     unsigned suffix_len = suffix.length();
     for ( ; i != end; ++i) {
@@ -165,17 +169,14 @@ void get_io(vector<string> &inputs, vector<string> &outputs, string input_dir,
         if (cur_in.filename() == cur_out.filename()) {
             inputs.push_back(cur_in.generic_string() + input_suffix);
             outputs.push_back(cur_out.generic_string() + output_suffix);
-            cout << "i/o " << inputs.back() << " " << outputs.back() << endl;
             ++i, ++j;
         } else if (cur_in.filename() < cur_out.filename() && cur_in.filename() != "") {
             inputs.push_back(cur_in.generic_string() + input_suffix);
             outputs.push_back("");
-            cout << "i " << inputs.back() << endl;
             ++i;
         } else {
             outputs.push_back(cur_out.generic_string() + output_suffix);
             inputs.push_back("");
-            cout << "o " << outputs.back() << endl;
             ++j;
         }
     }
@@ -201,6 +202,15 @@ void evaluate(string name, vector<string> args,
                 these_tests.push_back(execute_process(name,
                                             vector_to_argv(name, &args),
                                             inputs[i], temp_file, ""));
+                if (test) {
+                    if(compare(temp_file, outputs[i])) {
+                        cout << "Output from " << inputs[i] << " matches "
+                             << outputs[i] << endl;
+                    } else {
+                        cout << "Output from " << inputs[i] << " failed"
+                             << endl;
+                    }
+                }
                 if (time) print_results(these_tests.back());
             } catch (string err) {
                 cerr << "Error: " << err << endl;
@@ -208,4 +218,36 @@ void evaluate(string name, vector<string> args,
         }
         results.push_back(these_tests);
     }
+}
+
+
+bool compare(string file1, string file2)
+{
+    ifstream str_1(file1.c_str());
+    ifstream str_2(file2.c_str());
+    char c1, c2;
+    if (!str_1.is_open() || !str_2.is_open()) {
+        if (file1 == "" && str_2.is_open()) {
+            c2 = str_2.get();
+            if (!str_2.eof()) return false;
+            return true;
+        }
+        if (file2 == "" && str_1.is_open()) {
+            c1 = str_1.get();
+            if (!str_1.eof()) return false;
+            return true;
+        }
+        cerr << "Cannot open for testing on " << file2 << endl;
+        return false;
+    }
+    c1 = str_1.get();
+    c2 = str_2.get();
+    while (!str_1.eof() && !str_2.eof()) {
+        if (str_1.eof() || str_2.eof() || c1 != c2) {
+            return false;
+        }
+        c1 = str_1.get();
+        c2 = str_2.get();
+    }
+    return true;
 }
