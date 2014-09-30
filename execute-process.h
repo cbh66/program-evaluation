@@ -1,3 +1,6 @@
+#ifndef EXECUTE_PROCESS_H_INCLUDED
+#define EXECUTE_PROCESS_H_INCLUDED
+
 #include <string>
 
 struct ProgramInfo {
@@ -72,3 +75,5 @@ static inline ProgramInfo execute_process(std::string name)
 {
     return execute_process(name, NULL, NULL, NULL, NULL, 0);
 }
+
+#endif

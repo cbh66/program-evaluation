@@ -1,3 +1,6 @@
+#ifndef TESTER_H_INCLUDED
+#define TESTER_H_INCLUDED
+
 #include <string>
 #include <vector>
 
@@ -18,8 +21,10 @@ public:
     void ignore_too_few_chars();
 
 private:
-    bool ignore_whitespace;
-    vector<char> chars_to_ignore;
+    bool ignore_spaces;
+    std::string chars_to_ignore;
     std::string benchmark_file;
     std::string comparison_file;
 };
+
+#endif
