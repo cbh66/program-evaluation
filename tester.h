@@ -1,3 +1,5 @@
+#include <string>
+#include <vector>
 
 class Tester
 {
@@ -5,7 +7,7 @@ public:
     Tester();
 
     bool run();
-    string run_verbosely();
+    std::string run_verbosely();
 
     void set_benchmark_file(std::string filename);
     void set_comparison_file(std::string filename);
@@ -16,4 +18,8 @@ public:
     void ignore_too_few_chars();
 
 private:
+    bool ignore_whitespace;
+    vector<char> chars_to_ignore;
+    std::string benchmark_file;
+    std::string comparison_file;
 };
