@@ -8,6 +8,16 @@
 #include "tester.h"
 using namespace std;
 
+
+const string VERSION_INFORMATION =
+    "Evaluate 1.0\n"
+    "Copyright (C) 2014 Colin B Hamilton\n"
+    "This is free software: you are free to change and redistribute it.\n"
+    "There is NO WARRANTY, to the extent permitted by law.";
+
+const string USAGE_INFORMATION =
+    "Usage: get-timing-stats [options] executable";
+
 struct ProgramOptions {
     string program_name;
     vector<string> args;
@@ -57,6 +67,8 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
     po::options_description generic("Generic options");
     po::positional_options_description p_desc;
     generic.add_options()
+        ("help,h", "Produce help message")
+        ("version,v", "Produce version, origin, and legal information")
         ("program", po::value<string>(&(opts->program_name))->required(),
             "Specify executable to run")
         ("arg", po::value< vector<string> >(&(opts->args)),
@@ -66,9 +78,9 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
         ("output-dir,D", po::value<string>(&(opts->output_dir)),
             "Specify the directory containing input files")
         ("input-ext,e", po::value<string>(&(opts->input_suffix)),
-            "Specify the suffix (eg extension) identifying input files")
+            "Specify the suffix (eg. an extension) identifying input files")
         ("output-ext,E", po::value<string>(&(opts->output_suffix)),
-            "Specify the suffix (eg extension) identifying output files")
+            "Specify the suffix (eg. an extension) identifying output files")
         ("test,s", po::bool_switch(&(opts->just_test)),
             "Only run tests, do not time")
         ("time,m", po::bool_switch(&(opts->just_time)),
@@ -81,9 +93,20 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
                   options(generic).positional(p_desc).run(), args);
         po::notify(args);
     } catch (exception &err) {
-        cerr << "Error in arguments: " << err.what() << endl;
-        cerr << "(For help, use the --help or -h options)" << endl;
-        exit(1);
+        if (!args.count("help") && !args.count("version")) {
+            cerr << "Error in arguments: " << err.what() << endl;
+            cerr << "(For help, use the --help or -h options)" << endl;
+            exit(1);
+        }
+    }
+    if (args.count("help")) {
+        cout << USAGE_INFORMATION << endl;
+        cout << generic;
+        exit(0);
+    }
+    if (args.count("version")) {
+        cout << VERSION_INFORMATION << endl;
+        exit(0);
     }
 }
 
