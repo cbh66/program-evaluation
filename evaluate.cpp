@@ -4,6 +4,8 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include "execute-process.h"
+#include "timer.h"
+#include "tester.h"
 using namespace std;
 
 struct ProgramOptions {
@@ -21,21 +23,25 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts);
 char **vector_to_argv(string name, vector<string> *vect);
 void evaluate(string name, vector<string> args,
               vector<string> inputs, vector<string> outputs,
-              unsigned times, bool time, bool test);
+              unsigned times, bool time, bool test,
+              Timer &tim, Tester &tes);
 void get_io(vector<string> &inputs, vector<string> &outputs, string input_dir,
             string output_dir, string input_suffix, string output_suffix);
-bool compare(string file1, string file2);
 void print_results(ProgramInfo results);
 
 int main(int argc, char *argv[])
 {
+    Timer tim;
+    Tester tes;
     vector<string> inputs, outputs;
     ProgramOptions opts;
     parse_command_line_args(argc, argv, &opts);
+    tes.ignore_whitespace();
+
     get_io(inputs, outputs, opts.input_dir, opts.output_dir,
            opts.input_suffix, opts.output_suffix);
     evaluate(opts.program_name, opts.args, inputs, outputs, 1,
-             opts.just_time, opts.just_test);
+             opts.just_time, opts.just_test, tim, tes);
 
     return 0;
 }
@@ -130,7 +136,7 @@ void get_files_by_suffix(vector<boost::filesystem::path> &output,
 {
     namespace fs = boost::filesystem;
     fs::directory_iterator end;
-    fs::directory_iterator i(".");
+    fs::directory_iterator i;
     if (dir != "") {
         fs::path d(dir);
         if (d.is_absolute()) i = fs::directory_iterator(d);
@@ -185,10 +191,11 @@ void get_io(vector<string> &inputs, vector<string> &outputs, string input_dir,
 
 void evaluate(string name, vector<string> args,
               vector<string> inputs, vector<string> outputs,
-              unsigned times, bool time, bool test)
+              unsigned times, bool time, bool test,
+              Timer &tim, Tester &tes)
 {
     namespace fs = boost::filesystem;
-    vector< vector<ProgramInfo> > results;
+    vector<TimeSet> results;
     unsigned len = inputs.size();
     string temp_file = fs::temp_directory_path().native()
                             + fs::unique_path().native() + ".eval";
@@ -196,58 +203,32 @@ void evaluate(string name, vector<string> args,
         throw string("differing amounts of inputs and outputs");
     }
     for (unsigned i = 0; i < len; ++i) {
-        vector<ProgramInfo> these_tests;
+        TimeSet these_tests;
         for (unsigned j = 0; j < times; ++j) {
             try {
-                these_tests.push_back(execute_process(name,
+                these_tests.runs.push_back(execute_process(name,
                                             vector_to_argv(name, &args),
                                             inputs[i], temp_file, ""));
                 if (test) {
-                    if(compare(temp_file, outputs[i])) {
-                        cout << "Output from " << inputs[i] << " matches "
-                             << outputs[i] << endl;
-                    } else {
-                        cout << "Output from " << inputs[i] << " failed"
-                             << endl;
+                    string result = tes.set_benchmark_file(outputs[i])
+                                       .set_comparison_file(temp_file)
+                                       .run_verbosely();
+                    if (result != "") {
+                        cout << "On input "
+                             << fs::path(inputs[i]).filename().native()
+                             << ": " << endl << result << endl;
                     }
                 }
-                if (time) print_results(these_tests.back());
             } catch (string err) {
                 cerr << "Error: " << err << endl;
             }
         }
         results.push_back(these_tests);
+        results.back().input_file = inputs[i];
+        results.back().output_file = outputs[i];
+    }
+    if (time) {
+        tim.report_times(results);
     }
 }
 
-
-bool compare(string file1, string file2)
-{
-    ifstream str_1(file1.c_str());
-    ifstream str_2(file2.c_str());
-    char c1, c2;
-    if (!str_1.is_open() || !str_2.is_open()) {
-        if (file1 == "" && str_2.is_open()) {
-            c2 = str_2.get();
-            if (!str_2.eof()) return false;
-            return true;
-        }
-        if (file2 == "" && str_1.is_open()) {
-            c1 = str_1.get();
-            if (!str_1.eof()) return false;
-            return true;
-        }
-        cerr << "Cannot open for testing on " << file2 << endl;
-        return false;
-    }
-    c1 = str_1.get();
-    c2 = str_2.get();
-    while (!str_1.eof() && !str_2.eof()) {
-        if (str_1.eof() || str_2.eof() || c1 != c2) {
-            return false;
-        }
-        c1 = str_1.get();
-        c2 = str_2.get();
-    }
-    return true;
-}
