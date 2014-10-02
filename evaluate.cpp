@@ -27,17 +27,21 @@ struct ProgramOptions {
     string output_suffix;
     bool just_test;
     bool just_time;
+    bool be_quiet;
+    bool be_verbose;
+    unsigned times;
 };
 
 void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts);
+void verify_args(ProgramOptions *opts);
+
 char **vector_to_argv(string name, vector<string> *vect);
 void evaluate(string name, vector<string> args,
               vector<string> inputs, vector<string> outputs,
-              unsigned times, bool time, bool test,
+              ProgramOptions *opts,
               Timer &tim, Tester &tes);
 void get_io(vector<string> &inputs, vector<string> &outputs, string input_dir,
             string output_dir, string input_suffix, string output_suffix);
-void print_results(ProgramInfo results);
 
 int main(int argc, char *argv[])
 {
@@ -47,11 +51,11 @@ int main(int argc, char *argv[])
     ProgramOptions opts;
     parse_command_line_args(argc, argv, &opts);
     tes.ignore_whitespace();
+    if (opts.be_verbose) tes.print_on_success(); 
 
     get_io(inputs, outputs, opts.input_dir, opts.output_dir,
            opts.input_suffix, opts.output_suffix);
-    evaluate(opts.program_name, opts.args, inputs, outputs, 1,
-             opts.just_time, opts.just_test, tim, tes);
+    evaluate(opts.program_name, opts.args, inputs, outputs, &opts, tim, tes);
 
     return 0;
 }
@@ -85,6 +89,12 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
             "Only run tests, do not time")
         ("time,m", po::bool_switch(&(opts->just_time)),
             "Only time, do not evaluate tests")
+        ("quiet,q", po::bool_switch(&(opts->be_quiet)),
+            "Run quietly, only reporting failures")
+        ("loud,l", po::bool_switch(&(opts->be_verbose)),
+            "Run verbosely, reporting detailed results of all tests")
+        ("times,t", po::value<unsigned>(&(opts->times)),
+            "Specify number of times to run each test")
     ;
     p_desc.add("program", 1);
     p_desc.add("arg", -1);
@@ -107,6 +117,22 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
     if (args.count("version")) {
         cout << VERSION_INFORMATION << endl;
         exit(0);
+    }
+    if (!args.count("times")) {
+        opts->times = 1;
+    }
+    verify_args(opts);
+}
+
+
+void verify_args(ProgramOptions *opts)
+{
+    if (!opts->just_test && !opts->just_time) {
+        opts->just_test = opts->just_time = true;
+    }
+    if (opts->be_quiet && opts->be_verbose) {
+        cerr << "Error in arguments: cannot be both quiet and loud!" << endl;
+        exit(1);
     }
 }
 
@@ -214,7 +240,7 @@ void get_io(vector<string> &inputs, vector<string> &outputs, string input_dir,
 
 void evaluate(string name, vector<string> args,
               vector<string> inputs, vector<string> outputs,
-              unsigned times, bool time, bool test,
+              ProgramOptions *opts,
               Timer &tim, Tester &tes)
 {
     namespace fs = boost::filesystem;
@@ -227,19 +253,28 @@ void evaluate(string name, vector<string> args,
     }
     for (unsigned i = 0; i < len; ++i) {
         TimeSet these_tests;
-        for (unsigned j = 0; j < times; ++j) {
+        for (unsigned j = 0; j < opts->times; ++j) {
             try {
                 these_tests.runs.push_back(execute_process(name,
                                             vector_to_argv(name, &args),
                                             inputs[i], temp_file, ""));
-                if (test) {
-                    string result = tes.set_benchmark_file(outputs[i])
-                                       .set_comparison_file(temp_file)
-                                       .run_verbosely();
-                    if (result != "") {
-                        cout << "On input "
-                             << fs::path(inputs[i]).filename().native()
-                             << ": " << endl << result << endl;
+                if (opts->just_test && j == 0) {
+                    tes.set_benchmark_file(outputs[i])
+                       .set_comparison_file(temp_file);
+                    if (opts->be_quiet) {
+                        if (!tes.run()) {
+                            cout << "Failed on input "
+                                 << fs::path(inputs[i]).filename().native()
+                                 << endl;
+                        }
+                    } else {
+                        string result = tes.run_verbosely();
+                        if (result != "") {
+                            cout << "On input "
+                                 << fs::path(inputs[i]).filename().native()
+                                 << ": " << endl << result << endl;
+                        }
+
                     }
                 }
             } catch (string err) {
@@ -250,7 +285,7 @@ void evaluate(string name, vector<string> args,
         results.back().input_file = inputs[i];
         results.back().output_file = outputs[i];
     }
-    if (time) {
+    if (opts->just_time) {
         tim.report_times(results);
     }
 }

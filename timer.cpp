@@ -55,7 +55,8 @@ static void print_syses(const TimeSet times, const string seperator)
 
 void Timer::report_time(const TimeSet results)
 {
-        int size = results.runs.size();
+    int size = results.runs.size();
+    if (size > 0) {
         cout << results.input_file << endl;
         for (int j = 0; j < size; ++j) {
             cout << "        TRIAL " << j;
@@ -68,6 +69,7 @@ void Timer::report_time(const TimeSet results)
         cout << "s" << endl << "System: ";
         print_syses(results, "s      ");
         cout << "s" << endl << endl;
+    }
 }
 
 
