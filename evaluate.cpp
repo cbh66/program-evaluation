@@ -29,6 +29,7 @@ struct ProgramOptions {
     bool just_time;
     bool be_quiet;
     bool be_verbose;
+    bool report_all;
     unsigned times;
 };
 
@@ -95,6 +96,8 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
             "Run verbosely, reporting detailed results of all tests")
         ("times,t", po::value<unsigned>(&(opts->times)),
             "Specify number of times to run each test")
+        ("report-all,a", po::bool_switch(&(opts->report_all)),
+            "Report results of all tests, not just the first")
     ;
     p_desc.add("program", 1);
     p_desc.add("arg", -1);
@@ -258,7 +261,7 @@ void evaluate(string name, vector<string> args,
                 these_tests.runs.push_back(execute_process(name,
                                             vector_to_argv(name, &args),
                                             inputs[i], temp_file, ""));
-                if (opts->just_test && j == 0) {
+                if (opts->just_test && (opts->report_all || j == 0)) {
                     tes.set_benchmark_file(outputs[i])
                        .set_comparison_file(temp_file);
                     if (opts->be_quiet) {
