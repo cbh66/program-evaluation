@@ -1,3 +1,14 @@
+/*---------------------------------------------------------------------------*\
+ *  execute-process.h                                                        *
+ *  Written By: Colin Hamilton, Tufts University                             *
+ *  This file contains the interface for the execute-process module.         *
+ *  Specifically, it contains the definition for a ProgramInfo struct and    *
+ *  several functions that allow one to run an external program.             *
+ *  Each such function returns a ProgramInfo struct on success, containing   *
+ *  the amount of time the process took (wall, system, and user, each        *
+ *  specifying seconds and microseconds), and the exit code of the process.  *
+ *  See below for more specific descriptions of each.                        *
+\*---------------------------------------------------------------------------*/
 #ifndef EXECUTE_PROCESS_H_INCLUDED
 #define EXECUTE_PROCESS_H_INCLUDED
 
@@ -19,7 +30,7 @@ struct ProgramInfo {
  *    _max_cpu_time_, representing the maximum number of seconds to execute.
  *
  *  There are several overloads of this function, which allow some parameters
- *    to be omitted.  In each overload, a string may also be passed for
+ *    to be omitted.  In each overload, a string may be passed for
  *    redirection instead of a FILE *, in which case the file will be opened.
  *
  *  _argv_ may be NULL to indicate no arguments.  Otherwise, the array must

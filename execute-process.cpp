@@ -1,3 +1,9 @@
+/*---------------------------------------------------------------------------*\
+ *  execute-process.cpp                                                      *
+ *  Written By: Colin Hamilton, Tufts University                             *
+ *  This implementation for execute-process relies on fork(), execv(),       *
+ *    wait3(), dup2(), gettimeofday(), and setrlimit().  
+\*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <unistd.h>
 #include <sys/time.h>
