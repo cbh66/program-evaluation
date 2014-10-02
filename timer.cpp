@@ -1,3 +1,14 @@
+/*---------------------------------------------------------------------------*\
+ *  timer.cpp                                                                *
+ *  Written By: Colin Hamilton, Tufts University                             *
+ *  This implementation depends on the string, iostream, and iomanip         *
+ *    libraries.                                                             *
+ *  TO DO:                                                                   *
+ *   - Fix formatting of report_time() - instead of printing literal         *
+ *     strings, determine dynamically how long they ought to be, and how     *
+ *     many spaces to print.  Especially when the user can specify the       *
+ *     amount of precision in the decimals.                                  *
+\*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <iomanip>
 #include "timer.h"
