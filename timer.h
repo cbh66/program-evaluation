@@ -20,14 +20,13 @@
  *    TimeSet structs.  It simply calls Timer::report_time() on each.        *
  *                                                                           *
  *  TO DO:                                                                   *
- *   - Allow user to specify a stream to use other than cout (but still      *
- *     default to cout)                                                      *
  *   - Allow user to specify what to print out in the header.                *
  *   - Allow user to specify a maximum width to print.  If the information   *
  *     would overflow, move on to a new set of lines.                        *
 \*---------------------------------------------------------------------------*/
 #ifndef TIMER_H_INCLUDED
 #define TIMER_H_INCLUDED
+#include <ostream>
 #include <string>
 #include <vector>
 #include "execute-process.h"
@@ -55,6 +54,7 @@ public:
     Timer &precision_after_decimal(unsigned p);
     Timer &precision_before_decimal(unsigned p);
     Timer &spacing(unsigned n);
+    Timer &set_output(std::ostream *stream);
 
 private:
     bool report_avg;
@@ -62,6 +62,7 @@ private:
     unsigned before_decimal;
     unsigned after_decimal;
     unsigned spaces;
+    std::ostream *output;
     void print_line(const TimeSet times, const std::string seperator,
                        double (*get_num)(ProgramInfo));
     std::string repeat_char(char c, int times);

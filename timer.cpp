@@ -18,6 +18,7 @@ Timer::Timer()
     before_decimal = 3;
     after_decimal = 4;
     spaces = 4;
+    output = &cout;
 }
 
 
@@ -35,12 +36,12 @@ void Timer::print_line(const TimeSet times, const string seperator,
     double sum = 0.0;
     for (int i = 0; i < size; ++i) {
         double t = get_num(times.runs[i]);
-        cout << btwn << setw(before_decimal + 1 + after_decimal) << std::right
+        (*output) << btwn << setw(before_decimal + 1 + after_decimal) << std::right
              << t;
         sum += t;
         btwn = seperator;
     }
-    cout << btwn << setw(before_decimal + 1 + after_decimal) << std::right
+    (*output) << btwn << setw(before_decimal + 1 + after_decimal) << std::right
          << (sum / size);
 }
 
@@ -77,24 +78,24 @@ void Timer::report_time(const TimeSet results)
 {
     int size = results.runs.size();
     if (size > 0) {
-        cout << results.input_file << endl;
-        cout << repeat_char(' ', 8);
+        (*output) << results.input_file << endl;
+        (*output) << repeat_char(' ', 8);
         if (report_all_times) {
             for (int j = 0; j < size; ++j) {
-                cout << "TRIAL " << j;
-                cout << repeat_char(' ',
+                (*output) << "TRIAL " << j;
+                (*output) << repeat_char(' ',
                             (before_decimal + 2 + after_decimal + spaces)
                                 - 7);
             }                               // Or minus (6 + #digits in j)
         }
-        if (report_avg) cout << "  AVG" << endl;
-        cout << "Real:   ";
+        if (report_avg) (*output) << "  AVG" << endl;
+        (*output) << "Real:   ";
         print_line(results, "s" + repeat_char(' ', spaces), get_real);
-        cout << "s" << endl << "User:   ";
+        (*output) << "s" << endl << "User:   ";
         print_line(results, "s" + repeat_char(' ', spaces), get_user);
-        cout << "s" << endl << "System: ";
+        (*output) << "s" << endl << "System: ";
         print_line(results, "s" + repeat_char(' ', spaces), get_sys);
-        cout << "s" << endl << endl;
+        (*output) << "s" << endl << endl;
     }
 }
 
@@ -103,8 +104,8 @@ void Timer::report_times(const vector<TimeSet> all_results)
 {
     vector<TimeSet>::const_iterator it = all_results.begin();
     vector<TimeSet>::const_iterator end = all_results.end();
-    cout.setf(ios::fixed);
-    cout.precision(after_decimal);
+    (*output).setf(ios::fixed);
+    (*output).precision(after_decimal);
     while (it != end) {
         report_time(*it);
         ++it;
@@ -150,5 +151,12 @@ Timer &Timer::precision_before_decimal(unsigned p)
 Timer &Timer::spacing(unsigned n)
 {
     spaces = n;
+    return *this;
+}
+
+
+Timer &Timer::set_output(ostream *stream)
+{
+    output = stream;
     return *this;
 }
