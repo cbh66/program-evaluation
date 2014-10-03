@@ -19,6 +19,7 @@
  *                                                                           *
  *  TO DO:                                                                   *
  *   - Add options to add individual input and output files                  *
+ *   - Add options for outputting individual times, avg times, or both.      *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>

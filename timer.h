@@ -62,9 +62,8 @@ private:
     unsigned before_decimal;
     unsigned after_decimal;
     unsigned spaces;
-    void print_reals(const TimeSet times, const std::string seperator);
-    void print_users(const TimeSet times, const std::string seperator);
-    void print_syses(const TimeSet times, const std::string seperator);
+    void print_line(const TimeSet times, const std::string seperator,
+                       double (*get_num)(ProgramInfo));
     std::string repeat_char(char c, int times);
 };
 

@@ -4,12 +4,7 @@
  *  This implementation depends on the string, iostream, and iomanip         *
  *    libraries.                                                             *
  *  TO DO:                                                                   *
- *   - Fix formatting of report_time() - instead of printing literal         *
- *     strings, determine dynamically how long they ought to be, and how     *
- *     many spaces to print.  Especially when the user can specify the       *
- *     amount of precision in the decimals.                                  *
- *   - Report and/or calculare average time for each test.  Maybe have each  *
- *     print_ function also take in a bool for whether to do so.             *
+ *   - Write report_run()                                                    *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <iomanip>
@@ -32,15 +27,14 @@ void Timer::report_run(ProgramInfo result)
 }
 
 
-
-void Timer::print_reals(const TimeSet times, const string seperator)
+void Timer::print_line(const TimeSet times, const string seperator,
+                       double (*get_num)(ProgramInfo))
 {
     int size = times.runs.size();
     string btwn = "";
     double sum = 0.0;
     for (int i = 0; i < size; ++i) {
-        double t =  (double)times.runs[i].wall_sec
-                    + ((double)times.runs[i].wall_usec / 1000000.0);
+        double t = get_num(times.runs[i]);
         cout << btwn << setw(before_decimal + 1 + after_decimal) << std::right
              << t;
         sum += t;
@@ -50,39 +44,25 @@ void Timer::print_reals(const TimeSet times, const string seperator)
          << (sum / size);
 }
 
-void Timer::print_users(const TimeSet times, const string seperator)
+
+static double get_real(ProgramInfo p)
 {
-    int size = times.runs.size();
-    string btwn = "";
-    double sum = 0.0;
-    for (int i = 0; i < size; ++i) {
-        double t =  (double)times.runs[i].user_sec
-                    + ((double)times.runs[i].user_usec / 1000000.0);
-        cout << btwn << setw(before_decimal + 1 + after_decimal)
-             << t;
-        sum += t;
-        btwn = seperator;
-    }
-    cout << btwn << setw(before_decimal + 1 + after_decimal) << std::right
-         << (sum / size);
+    return (double) p.wall_sec
+        + ((double) p.wall_usec / 1000000.0);
 }
 
-void Timer::print_syses(const TimeSet times, const string seperator)
+static double get_user(ProgramInfo p)
 {
-    int size = times.runs.size();
-    string btwn = "";
-    double sum = 0.0;
-    for (int i = 0; i < size; ++i) {
-        double t =  (double)times.runs[i].sys_sec
-                    + ((double)times.runs[i].sys_usec / 1000000.0);
-        cout << btwn << setw(before_decimal + 1 + after_decimal) << std::right
-            << t;
-        sum += t;
-        btwn = seperator;
-    }
-    cout << btwn << setw(before_decimal + 1 + after_decimal) << std::right
-         << (sum / size);
+    return (double) p.user_sec
+        + ((double) p.user_usec / 1000000.0);
 }
+
+static double get_sys(ProgramInfo p)
+{
+    return (double) p.sys_sec
+        + ((double) p.sys_usec / 1000000.0);
+}
+
 
 string Timer::repeat_char(char c, int times)
 {
@@ -109,11 +89,11 @@ void Timer::report_time(const TimeSet results)
         }
         if (report_avg) cout << "  AVG" << endl;
         cout << "Real:   ";
-        print_reals(results, "s" + repeat_char(' ', spaces));
+        print_line(results, "s" + repeat_char(' ', spaces), get_real);
         cout << "s" << endl << "User:   ";
-        print_users(results, "s" + repeat_char(' ', spaces));
+        print_line(results, "s" + repeat_char(' ', spaces), get_user);
         cout << "s" << endl << "System: ";
-        print_syses(results, "s" + repeat_char(' ', spaces));
+        print_line(results, "s" + repeat_char(' ', spaces), get_sys);
         cout << "s" << endl << endl;
     }
 }
