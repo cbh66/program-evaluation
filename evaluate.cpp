@@ -32,7 +32,7 @@ using namespace std;
 
 
 const string VERSION_INFORMATION =
-    "Evaluate v1.1.2\n"
+    "Evaluate v1.1.3\n"
     "Copyright (C) 2014 Colin B Hamilton\n"
     "This is free software: you are free to change and redistribute it.\n"
     "There is NO WARRANTY, to the extent permitted by law.";
@@ -55,6 +55,7 @@ struct ProgramOptions {
     unsigned times;
     unsigned max_time;
     unsigned time_precision;
+    unsigned spacing;
 };
 
 void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts);
@@ -77,7 +78,7 @@ int main(int argc, char *argv[])
     parse_command_line_args(argc, argv, &opts);
     tes.ignore_whitespace();
     if (opts.be_verbose) tes.print_on_success(); 
-    tim.precision_after_decimal(opts.time_precision);
+    tim.precision_after_decimal(opts.time_precision).spacing(opts.spacing);
 
     get_io(inputs, outputs, opts.input_dir, opts.output_dir,
            opts.input_suffix, opts.output_suffix);
@@ -127,6 +128,8 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
             "Set a time limit for each test in seconds (0 for no limit)")
         ("precision,p", po::value<unsigned>(&(opts->time_precision)),
             "Set decimal precision for output of timing")
+        ("spacing,S", po::value<unsigned>(&(opts->spacing)),
+            "Specify spacing between columns in timing report")
     ;
     p_desc.add("program", 1);
     p_desc.add("arg", -1);
@@ -158,6 +161,9 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
     }
     if (!args.count("precision")) {
         opts->time_precision = 4;
+    }
+    if (!args.count("spacing")) {
+        opts->spacing = 2;
     }
     verify_args(opts);
 }
