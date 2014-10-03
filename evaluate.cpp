@@ -16,6 +16,9 @@
  *    files.  The evaluate() function contains the core of the program,      *
  *    and relies on functions for the execute-process, timer, and tester     *
  *    modules.                                                               *
+ *                                                                           *
+ *  TO DO:                                                                   *
+ *   - Add option to specify a maximum time.                                 *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -29,7 +32,7 @@ using namespace std;
 
 
 const string VERSION_INFORMATION =
-    "Evaluate 1.0\n"
+    "Evaluate v1.1.0\n"
     "Copyright (C) 2014 Colin B Hamilton\n"
     "This is free software: you are free to change and redistribute it.\n"
     "There is NO WARRANTY, to the extent permitted by law.";

@@ -7,7 +7,7 @@
  *    useful for storing the results of a single test, run several times.    *
  *  One need only create an object of this type, call some methods, if       *
  *    desired, to determine how to format the output and what to report,     *
- *    and finally call one of the report function.                           *
+ *    and finally call one of the report methods.                            *
  *                                                                           *
  *  Timer::report_run() prints to cout the information stored in a single    *
  *    ProgramInfo struct.    -- THIS FUNCTION IS NOT YET IMPLEMENTED --      *

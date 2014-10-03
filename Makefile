@@ -7,7 +7,7 @@ CFLAGS=-c -Wall -Wextra -g
 LDFLAGS=-Wall -Wextra -g
 LIBS=-lboost_program_options -lboost_filesystem -lboost_system
 
-all: $(OBJS)
+evaluate: $(OBJS)
 	$(CXX) $(LDFLAGS) $(LIBS) $(OBJS) -o $(PROGNAME)
 
 %.o: %.cpp
