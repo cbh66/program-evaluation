@@ -1,3 +1,19 @@
+/*---------------------------------------------------------------------------*\
+ *  timer.cpp                                                                *
+ *  Written By: Colin Hamilton, Tufts University                             *
+ *  This implementation depends on the iostream, fstream, vector, and        *
+ *    boost/lexical_cast.hpp libraries.                                      *
+ *  Currently it largely compares files character-by-character.  To take the *
+ *    "ignore characters" and/or whitespace into account, it utilizes the    *
+ *    Tester::get_next_char() function, which reads characters until it      *
+ *    finds one that is _not_ an ignore character, which it then returns.    *
+ *                                                                           *
+ *  TO DO:                                                                   *
+ *   - Allow for more detailed error reporting by a more sophisticated       *
+ *     file comparison algorithm.  It could be useful to report, e.g., a     *
+ *     range of lines that failed, if the entire file didn't.  Or perhaps    *
+ *     calculating something like what percentage matched.                   *
+\*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <boost/lexical_cast.hpp>
 #include "tester.h"
