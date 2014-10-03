@@ -1,3 +1,22 @@
+/*---------------------------------------------------------------------------*\
+ *  evaluate.cpp                                                             *
+ *  Written By: Colin Hamilton, Tufts University                             *
+ *  This file should be supplied with a Makefile.  The "make" command should *
+ *    compile it.  If the Makefile is not there, you can run                 *
+ *    g++ evaluate.cpp execute-process.cpp timer.cpp tester.cpp \            *
+ *        -lboost_program_options -lboost_filesystem -lboost_system \        *
+ *        -o evaluate                                                        *
+ *                                                                           *
+ *  As that command indicates, this program relies on three boost libraries: *
+ *    boost::program_options, boost::filesystem, and boost::system.          *
+ *    The most recent version of the libraries can be downloaded from        *
+ *    http://www.boost.org                                                   *
+ *                                                                           *
+ *  This main file primarily evaluates program options and finds specified   *
+ *    files.  The evaluate() function contains the core of the program,      *
+ *    and relies on functions for the execute-process, timer, and tester     *
+ *    modules.                                                               *
+\*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
 #include <vector>
