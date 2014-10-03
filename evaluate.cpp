@@ -120,15 +120,19 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
             "Run quietly, only reporting failures")
         ("loud,l", po::bool_switch(&(opts->be_verbose)),
             "Run verbosely, reporting detailed results of all tests")
-        ("times,t", po::value<unsigned>(&(opts->times)),
+        ("times,t", po::value<unsigned>(&(opts->times))
+                            ->default_value(1),
             "Specify number of times to run each test")
         ("report-all,a", po::bool_switch(&(opts->report_all)),
             "Report results of all tests, not just the first")
-        ("max-time,m", po::value<unsigned>(&(opts->max_time)),
+        ("max-time,m", po::value<unsigned>(&(opts->max_time))
+                            ->default_value(0),
             "Set a time limit for each test in seconds (0 for no limit)")
-        ("precision,p", po::value<unsigned>(&(opts->time_precision)),
+        ("precision,p", po::value<unsigned>(&(opts->time_precision))
+                            ->default_value(4),
             "Set decimal precision for output of timing")
-        ("spacing,S", po::value<unsigned>(&(opts->spacing)),
+        ("spacing,S", po::value<unsigned>(&(opts->spacing))
+                            ->default_value(2),
             "Specify spacing between columns in timing report")
     ;
     p_desc.add("program", 1);
@@ -152,18 +156,6 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
     if (args.count("version")) {
         cout << VERSION_INFORMATION << endl;
         exit(0);
-    }
-    if (!args.count("times")) {
-        opts->times = 1;
-    }
-    if (!args.count("max-time")) {
-        opts->max_time = 0;
-    }
-    if (!args.count("precision")) {
-        opts->time_precision = 4;
-    }
-    if (!args.count("spacing")) {
-        opts->spacing = 2;
     }
     verify_args(opts);
 }
