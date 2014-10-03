@@ -20,7 +20,7 @@ using namespace std;
 Timer::Timer()
 {
     report_all();
-    before_decimal = 4;
+    before_decimal = 3;
     after_decimal = 4;
     spaces = 4;
 }
@@ -37,39 +37,51 @@ void Timer::print_reals(const TimeSet times, const string seperator)
 {
     int size = times.runs.size();
     string btwn = "";
+    double sum = 0.0;
     for (int i = 0; i < size; ++i) {
         double t =  (double)times.runs[i].wall_sec
                     + ((double)times.runs[i].wall_usec / 1000000.0);
         cout << btwn << setw(before_decimal + 1 + after_decimal) << std::right
              << t;
+        sum += t;
         btwn = seperator;
     }
+    cout << btwn << setw(before_decimal + 1 + after_decimal) << std::right
+         << (sum / size);
 }
 
 void Timer::print_users(const TimeSet times, const string seperator)
 {
     int size = times.runs.size();
     string btwn = "";
+    double sum = 0.0;
     for (int i = 0; i < size; ++i) {
         double t =  (double)times.runs[i].user_sec
                     + ((double)times.runs[i].user_usec / 1000000.0);
         cout << btwn << setw(before_decimal + 1 + after_decimal)
              << t;
+        sum += t;
         btwn = seperator;
     }
+    cout << btwn << setw(before_decimal + 1 + after_decimal) << std::right
+         << (sum / size);
 }
 
 void Timer::print_syses(const TimeSet times, const string seperator)
 {
     int size = times.runs.size();
     string btwn = "";
+    double sum = 0.0;
     for (int i = 0; i < size; ++i) {
         double t =  (double)times.runs[i].sys_sec
                     + ((double)times.runs[i].sys_usec / 1000000.0);
         cout << btwn << setw(before_decimal + 1 + after_decimal) << std::right
             << t;
+        sum += t;
         btwn = seperator;
     }
+    cout << btwn << setw(before_decimal + 1 + after_decimal) << std::right
+         << (sum / size);
 }
 
 string Timer::repeat_char(char c, int times)
@@ -87,13 +99,15 @@ void Timer::report_time(const TimeSet results)
     if (size > 0) {
         cout << results.input_file << endl;
         cout << repeat_char(' ', 8);
-        for (int j = 0; j < size; ++j) {
-            cout << "TRIAL " << j;
-            cout << repeat_char(' ',
-                                (before_decimal + 2 + after_decimal + spaces)
-                                  - 7);
-        }                               // Or minus (6 + #digits in j)
-        cout << "AVG" << endl;
+        if (report_all_times) {
+            for (int j = 0; j < size; ++j) {
+                cout << "TRIAL " << j;
+                cout << repeat_char(' ',
+                            (before_decimal + 2 + after_decimal + spaces)
+                                - 7);
+            }                               // Or minus (6 + #digits in j)
+        }
+        if (report_avg) cout << "  AVG" << endl;
         cout << "Real:   ";
         print_reals(results, "s" + repeat_char(' ', spaces));
         cout << "s" << endl << "User:   ";
