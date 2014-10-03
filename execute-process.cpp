@@ -2,12 +2,19 @@
  *  execute-process.cpp                                                      *
  *  Written By: Colin Hamilton, Tufts University                             *
  *  This implementation for execute-process relies on fork(), execv(),       *
- *    wait3(), dup2(), gettimeofday(), and setrlimit().  
+ *    wait3(), dup2(), gettimeofday(), and setrlimit().                      *
+ *    It also uses the boost::lexical_cast library to aid in producing       *
+ *    exception messages.                                                    *
+ *                                                                           *
+ *  TO DO:                                                                   *
+ *   - Handle signals by sending them to the child process instead.          *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <signal.h>
+#include <boost/lexical_cast.hpp>
 #include "execute-process.h"
 using namespace std;
 
@@ -16,6 +23,7 @@ ProgramInfo execute_process(string name, char *argv[],
                   unsigned max_cpu_time)
 {
     pid_t child_id;
+    int exit_status;
     timeval before, after;
     rlimit time_limit;
     rusage time_taken;
@@ -24,8 +32,12 @@ ProgramInfo execute_process(string name, char *argv[],
     gettimeofday(&before, NULL);
     if ((child_id = fork())) {
         if (child_id < 0) throw string("could not open process");
-        wait3(&r_val.exit_code, 0, &time_taken);
+        wait3(&exit_status, 0, &time_taken);
         gettimeofday(&after, NULL);
+        if (WIFSIGNALED(exit_status)) {
+            throw string("process terminated by signal number ")
+                + boost::lexical_cast<string>(WTERMSIG(exit_status));
+        }
         r_val.user_sec  = time_taken.ru_utime.tv_sec;
         r_val.user_usec = time_taken.ru_utime.tv_usec;
         r_val.sys_sec   = time_taken.ru_stime.tv_sec;

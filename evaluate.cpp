@@ -18,7 +18,6 @@
  *    modules.                                                               *
  *                                                                           *
  *  TO DO:                                                                   *
- *   - Add option to specify a maximum time.                                 *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -32,7 +31,7 @@ using namespace std;
 
 
 const string VERSION_INFORMATION =
-    "Evaluate v1.1.0\n"
+    "Evaluate v1.1.1\n"
     "Copyright (C) 2014 Colin B Hamilton\n"
     "This is free software: you are free to change and redistribute it.\n"
     "There is NO WARRANTY, to the extent permitted by law.";
@@ -53,6 +52,7 @@ struct ProgramOptions {
     bool be_verbose;
     bool report_all;
     unsigned times;
+    unsigned max_time;
 };
 
 void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts);
@@ -120,6 +120,8 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
             "Specify number of times to run each test")
         ("report-all,a", po::bool_switch(&(opts->report_all)),
             "Report results of all tests, not just the first")
+        ("max-time,m", po::value<unsigned>(&(opts->max_time)),
+            "Set a time limit for each test in seconds (0 for no limit)")
     ;
     p_desc.add("program", 1);
     p_desc.add("arg", -1);
@@ -145,6 +147,9 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
     }
     if (!args.count("times")) {
         opts->times = 1;
+    }
+    if (!args.count("max-time")) {
+        opts->max_time = 0;
     }
     verify_args(opts);
 }
@@ -281,8 +286,9 @@ void evaluate(string name, vector<string> args,
         for (unsigned j = 0; j < opts->times; ++j) {
             try {
                 these_tests.runs.push_back(execute_process(name,
-                                            vector_to_argv(name, &args),
-                                            inputs[i], temp_file, ""));
+                                                vector_to_argv(name, &args),
+                                                inputs[i], temp_file, "",
+                                                opts->max_time));
                 if (opts->just_test && (opts->report_all || j == 0)) {
                     tes.set_benchmark_file(outputs[i])
                        .set_comparison_file(temp_file);
@@ -303,7 +309,8 @@ void evaluate(string name, vector<string> args,
                     }
                 }
             } catch (string err) {
-                cerr << "Error: " << err << endl;
+                cerr << "Error on input " << fs::path(inputs[i]).filename().native()
+                     << ": " << err << endl;
             }
         }
         results.push_back(these_tests);
