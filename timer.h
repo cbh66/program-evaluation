@@ -20,12 +20,12 @@
  *    TimeSet structs.  It simply calls Timer::report_time() on each.        *
  *                                                                           *
  *  TO DO:                                                                   *
- *   - Allow user to specify precision of output after decimal point.        *
  *   - Allow user to specify a stream to use other than cout (but still      *
  *     default to cout)                                                      *
  *   - Allow user to specify what to print out in the header.                *
  *   - Allow user to specify a maximum width to print.  If the information   *
  *     would overflow, move on to a new set of lines.                        *
+ *   - Allow user to specify spacing between columns.                        *
 \*---------------------------------------------------------------------------*/
 #ifndef TIMER_H_INCLUDED
 #define TIMER_H_INCLUDED
@@ -53,10 +53,18 @@ public:
     Timer &report_only_avg();
     Timer &dont_report_avg();
     Timer &report_all();
+    Timer &precision_after_decimal(unsigned p);
+    Timer &precision_before_decimal(unsigned p);
 
 private:
     bool report_avg;
     bool report_all_times;
+    unsigned before_decimal;
+    unsigned after_decimal;
+    void print_reals(const TimeSet times, const std::string seperator);
+    void print_users(const TimeSet times, const std::string seperator);
+    void print_syses(const TimeSet times, const std::string seperator);
+    void repeat_char(char c, int times);
 };
 
 #endif

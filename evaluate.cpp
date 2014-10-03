@@ -18,6 +18,7 @@
  *    modules.                                                               *
  *                                                                           *
  *  TO DO:                                                                   *
+ *   - Add options to add individual input and output files                  *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -31,7 +32,7 @@ using namespace std;
 
 
 const string VERSION_INFORMATION =
-    "Evaluate v1.1.1\n"
+    "Evaluate v1.1.2\n"
     "Copyright (C) 2014 Colin B Hamilton\n"
     "This is free software: you are free to change and redistribute it.\n"
     "There is NO WARRANTY, to the extent permitted by law.";
@@ -53,6 +54,7 @@ struct ProgramOptions {
     bool report_all;
     unsigned times;
     unsigned max_time;
+    unsigned time_precision;
 };
 
 void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts);
@@ -75,6 +77,7 @@ int main(int argc, char *argv[])
     parse_command_line_args(argc, argv, &opts);
     tes.ignore_whitespace();
     if (opts.be_verbose) tes.print_on_success(); 
+    tim.precision_after_decimal(opts.time_precision);
 
     get_io(inputs, outputs, opts.input_dir, opts.output_dir,
            opts.input_suffix, opts.output_suffix);
@@ -122,6 +125,8 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
             "Report results of all tests, not just the first")
         ("max-time,m", po::value<unsigned>(&(opts->max_time)),
             "Set a time limit for each test in seconds (0 for no limit)")
+        ("precision,p", po::value<unsigned>(&(opts->time_precision)),
+            "Set decimal precision for output of timing")
     ;
     p_desc.add("program", 1);
     p_desc.add("arg", -1);
@@ -150,6 +155,9 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
     }
     if (!args.count("max-time")) {
         opts->max_time = 0;
+    }
+    if (!args.count("precision")) {
+        opts->time_precision = 4;
     }
     verify_args(opts);
 }

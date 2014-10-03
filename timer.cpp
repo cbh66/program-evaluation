@@ -8,6 +8,8 @@
  *     strings, determine dynamically how long they ought to be, and how     *
  *     many spaces to print.  Especially when the user can specify the       *
  *     amount of precision in the decimals.                                  *
+ *   - Report and/or calculare average time for each test.  Maybe have each  *
+ *     print_ function also take in a bool for whether to do so.             *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <iomanip>
@@ -18,6 +20,8 @@ using namespace std;
 Timer::Timer()
 {
     report_all();
+    before_decimal = 4;
+    after_decimal = 4;
 }
 
 
@@ -28,39 +32,49 @@ void Timer::report_run(ProgramInfo result)
 
 
 
-static void print_reals(const TimeSet times, const string seperator)
+void Timer::print_reals(const TimeSet times, const string seperator)
 {
     int size = times.runs.size();
     string btwn = "";
     for (int i = 0; i < size; ++i) {
         double t =  (double)times.runs[i].wall_sec
                     + ((double)times.runs[i].wall_usec / 1000000.0);
-        cout << btwn << t;
+        cout << btwn << setw(before_decimal + 1 + after_decimal) << std::right
+             << t;
         btwn = seperator;
     }
 }
 
-static void print_users(const TimeSet times, const string seperator)
+void Timer::print_users(const TimeSet times, const string seperator)
 {
     int size = times.runs.size();
     string btwn = "";
     for (int i = 0; i < size; ++i) {
         double t =  (double)times.runs[i].user_sec
                     + ((double)times.runs[i].user_usec / 1000000.0);
-        cout << btwn << t;
+        cout << btwn << setw(before_decimal + 1 + after_decimal)
+             << t;
         btwn = seperator;
     }
 }
 
-static void print_syses(const TimeSet times, const string seperator)
+void Timer::print_syses(const TimeSet times, const string seperator)
 {
     int size = times.runs.size();
     string btwn = "";
     for (int i = 0; i < size; ++i) {
         double t =  (double)times.runs[i].sys_sec
                     + ((double)times.runs[i].sys_usec / 1000000.0);
-        cout << setw(8) << std::right << btwn << t;
+        cout << btwn << setw(before_decimal + 1 + after_decimal) << std::right
+            << t;
         btwn = seperator;
+    }
+}
+
+void Timer::repeat_char(char c, int times)
+{
+    for (; times > 0; --times) {
+        cout << c;
     }
 }
 
@@ -69,16 +83,18 @@ void Timer::report_time(const TimeSet results)
     int size = results.runs.size();
     if (size > 0) {
         cout << results.input_file << endl;
+        repeat_char(' ', 8);
         for (int j = 0; j < size; ++j) {
-            cout << "        TRIAL " << j;
-        }
+            cout << "TRIAL " << j;      // 4 for decimal + "s  "
+            repeat_char(' ', (before_decimal + 4 + after_decimal) - 7);
+        }                               // Or minus (6 + #digits in j)
         cout << "       AVG" << endl;
         cout << "Real:   ";
-        print_reals(results, "s      ");
+        print_reals(results, "s  ");
         cout << "s" << endl << "User:   ";
-        print_users(results, "s      ");
+        print_users(results, "s  ");
         cout << "s" << endl << "System: ";
-        print_syses(results, "s      ");
+        print_syses(results, "s  ");
         cout << "s" << endl << endl;
     }
 }
@@ -89,6 +105,7 @@ void Timer::report_times(const vector<TimeSet> all_results)
     vector<TimeSet>::const_iterator it = all_results.begin();
     vector<TimeSet>::const_iterator end = all_results.end();
     cout.setf(ios::fixed);
+    cout.precision(after_decimal);
     while (it != end) {
         report_time(*it);
         ++it;
@@ -115,5 +132,18 @@ Timer &Timer::report_all()
 {
     report_avg = true;
     report_all_times = true;
+    return *this;
+}
+
+
+Timer &Timer::precision_after_decimal(unsigned p)
+{
+    after_decimal = p;
+    return *this;
+}
+
+Timer &Timer::precision_before_decimal(unsigned p)
+{
+    before_decimal = p;
     return *this;
 }
