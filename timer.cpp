@@ -39,6 +39,16 @@ static double get_sys(ProgramInfo p)
         + ((double) p.sys_usec / 1000000.0);
 }
 
+static unsigned num_digits(unsigned x)
+{
+    if (x < 10) return 1;
+    if (x < 100) return 2;
+    if (x < 1000) return 3;
+    if (x < 10000) return 4;
+    if (x < 100000) return 5;
+    return 5 + num_digits(x / 100000);
+}
+
 
 void Timer::report_run(ProgramInfo result)
 {
@@ -95,8 +105,8 @@ void Timer::report_time(const TimeSet results)
                 (*output) << "TRIAL " << j;
                 (*output) << repeat_char(' ',
                             (before_decimal + 2 + after_decimal + spaces)
-                                - 7);
-            }                               // Or minus (6 + #digits in j)
+                                - (6 + num_digits(j)));
+            }
         }
         if (report_avg) (*output) << "  AVG";
         (*output) << endl;
