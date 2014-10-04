@@ -60,13 +60,17 @@ void Timer::print_line(const TimeSet times, const string seperator,
     double sum = 0.0;
     for (int i = 0; i < size; ++i) {
         double t = get_num(times.runs[i]);
-        (*output) << btwn << setw(before_decimal + 1 + after_decimal) << std::right
-             << t;
+        if (report_all_times) {
+            (*output) << btwn << setw(before_decimal + 1 + after_decimal)
+                      << std::right << t;
+            btwn = seperator;
+        }
         sum += t;
-        btwn = seperator;
     }
-    (*output) << btwn << setw(before_decimal + 1 + after_decimal) << std::right
-         << (sum / size);
+    if (report_avg) {
+        (*output) << btwn << setw(before_decimal + 1 + after_decimal)
+                  << std::right << (sum / size);
+    }
 }
 
 
@@ -94,7 +98,8 @@ void Timer::report_time(const TimeSet results)
                                 - 7);
             }                               // Or minus (6 + #digits in j)
         }
-        if (report_avg) (*output) << "  AVG" << endl;
+        if (report_avg) (*output) << "  AVG";
+        (*output) << endl;
         (*output) << "Real:   ";
         print_line(results, "s" + repeat_char(' ', spaces), get_real);
         (*output) << "s" << endl << "User:   ";

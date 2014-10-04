@@ -34,7 +34,7 @@ using namespace std;
 
 
 const string VERSION_INFORMATION =
-    "Evaluate v1.2.2\n"
+    "Evaluate v1.2.3\n"
     "Copyright (C) 2014 Colin B Hamilton\n"
     "This is free software: you are free to change and redistribute it.\n"
     "There is NO WARRANTY, to the extent permitted by law.";
@@ -54,7 +54,9 @@ struct ProgramOptions {
     bool just_time;
     bool be_quiet;
     bool be_verbose;
-    bool report_all;
+    bool all_tests;
+    bool all_times;
+    bool avg_time;
     unsigned times;
     unsigned max_time;
     unsigned time_precision;
@@ -80,7 +82,13 @@ int main(int argc, char *argv[])
     ProgramOptions opts;
     parse_command_line_args(argc, argv, &opts);
     tes.ignore_whitespace();
-    if (opts.be_verbose) tes.print_on_success(); 
+    if (opts.be_verbose) tes.print_on_success();
+    if (opts.all_times) {
+        if (opts.avg_time) tim.report_all();
+        else tim.dont_report_avg();
+    } else if (opts.avg_time) {
+        tim.report_only_avg();
+    }
     tim.precision_after_decimal(opts.time_precision).spacing(opts.spacing);
 
     get_io(inputs, outputs, opts.input_dir, opts.output_dir,
@@ -126,7 +134,7 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
         ("times,t", po::value<unsigned>(&(opts->times))
                             ->default_value(1),
             "Specify number of times to run each test")
-        ("report-all,a", po::bool_switch(&(opts->report_all)),
+        ("all-tests,a", po::bool_switch(&(opts->all_tests)),
             "Report results of all tests, not just the first")
         ("max-time,m", po::value<unsigned>(&(opts->max_time))
                             ->default_value(0),
@@ -137,6 +145,10 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
         ("spacing,S", po::value<unsigned>(&(opts->spacing))
                             ->default_value(2),
             "Specify spacing between columns in timing report")
+        ("all-times,A", po::bool_switch(&(opts->all_times)),
+            "Report results of all timing tests")
+        ("avg-time,v", po::bool_switch(&(opts->avg_time)),
+            "Report the average results for each timing test")
     ;
     p_desc.add("program", 1);
     p_desc.add("arg", -1);
@@ -168,6 +180,9 @@ void verify_args(ProgramOptions *opts)
 {
     if (!opts->just_test && !opts->just_time) {
         opts->just_test = opts->just_time = true;
+    }
+    if (!opts->all_times && !opts->avg_time) {
+        opts->all_times = opts->avg_time = true;
     }
     if (opts->be_quiet && opts->be_verbose) {
         cerr << "Error in arguments: cannot be both quiet and loud!" << endl;
@@ -298,7 +313,7 @@ void evaluate(string name, vector<string> args,
                                                 vector_to_argv(name, &args),
                                                 inputs[i], temp_file, "",
                                                 opts->max_time));
-                if (opts->just_test && (opts->report_all || j == 0)) {
+                if (opts->just_test && (opts->all_tests || j == 0)) {
                     tes.set_benchmark_file(outputs[i])
                        .set_comparison_file(temp_file);
                     if (opts->be_quiet) {

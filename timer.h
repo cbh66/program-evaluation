@@ -20,7 +20,6 @@
  *    TimeSet structs.  It simply calls Timer::report_time() on each.        *
  *                                                                           *
  *  TO DO:                                                                   *
- *   - Allow user to specify what to print out in the header.                *
  *   - Allow user to specify a maximum width to print.  If the information   *
  *     would overflow, move on to a new set of lines.                        *
 \*---------------------------------------------------------------------------*/
