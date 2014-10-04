@@ -20,7 +20,7 @@
  *  TO DO:                                                                   *
  *   - Add options to add individual input and output files                  *
  *   - Add options to be more specific about the headers for timing.         *
- *   - Remove temp files when done with them                                 *
+ *   - Separate options into categories for organization & brevity           *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -34,13 +34,13 @@ using namespace std;
 
 
 const string VERSION_INFORMATION =
-    "Evaluate v1.2.4\n"
+    "Evaluate v1.2.5\n"
     "Copyright (C) 2014 Colin B Hamilton\n"
     "This is free software: you are free to change and redistribute it.\n"
     "There is NO WARRANTY, to the extent permitted by law.";
 
 const string USAGE_INFORMATION =
-    "Usage: get-timing-stats [options] executable";
+    "Usage: evaluate [options] executable";
 
 struct ProgramOptions {
     string program_name;
@@ -351,5 +351,6 @@ void evaluate(string name, vector<string> args,
     if (opts->just_time) {
         tim.report_times(results);
     }
+    fs::remove(temp_file);
 }
 
