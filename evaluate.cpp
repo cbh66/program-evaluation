@@ -19,8 +19,8 @@
  *                                                                           *
  *  TO DO:                                                                   *
  *   - Add options to add individual input and output files                  *
- *   - Add options for outputting individual times, avg times, or both.      *
  *   - Add options to be more specific about the headers for timing.         *
+ *   - Remove temp files when done with them                                 *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -34,7 +34,7 @@ using namespace std;
 
 
 const string VERSION_INFORMATION =
-    "Evaluate v1.2.3\n"
+    "Evaluate v1.2.4\n"
     "Copyright (C) 2014 Colin B Hamilton\n"
     "This is free software: you are free to change and redistribute it.\n"
     "There is NO WARRANTY, to the extent permitted by law.";
@@ -61,6 +61,7 @@ struct ProgramOptions {
     unsigned max_time;
     unsigned time_precision;
     unsigned spacing;
+    unsigned max_width;
 };
 
 void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts);
@@ -89,7 +90,8 @@ int main(int argc, char *argv[])
     } else if (opts.avg_time) {
         tim.report_only_avg();
     }
-    tim.precision_after_decimal(opts.time_precision).spacing(opts.spacing);
+    tim.precision_after_decimal(opts.time_precision).spacing(opts.spacing)
+       .line_width(opts.max_width);
 
     get_io(inputs, outputs, opts.input_dir, opts.output_dir,
            opts.input_suffix, opts.output_suffix);
@@ -149,6 +151,10 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
             "Report results of all timing tests")
         ("avg-time,v", po::bool_switch(&(opts->avg_time)),
             "Report the average results for each timing test")
+        ("max-width,w", po::value<unsigned>(&(opts->max_width))
+                            ->default_value(80),
+            "Specify the maximum width of a line for a better"
+            " formatted timing report")
     ;
     p_desc.add("program", 1);
     p_desc.add("arg", -1);

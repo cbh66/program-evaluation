@@ -4,6 +4,10 @@
  *  This implementation depends on the string, iostream, and iomanip         *
  *    libraries.                                                             *
  *  TO DO:                                                                   *
+ *   - Add verification before printing, that the columns have well-defined  *
+ *     width.  That is, that the number of digits printed for each test is   *
+ *     less than the width of the column.  If not, more spaces can be added  *
+ *     to the column header (ie spaces can be set to the lowest valid number)*
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <iomanip>
@@ -17,6 +21,7 @@ Timer::Timer()
     before_decimal = 3;
     after_decimal = 4;
     spaces = 4;
+    width = 80;
     output = &cout;
 }
 
@@ -61,26 +66,27 @@ void Timer::report_run(ProgramInfo result)
         (*output) << "s" << endl << endl;
 }
 
-
-void Timer::print_line(const TimeSet times, const string seperator,
-                       double (*get_num)(ProgramInfo))
+//  Move out priting of the average.  Instead, have it return the
+//    running total and then the caller can calculate the average.
+double Timer::print_line(const TimeSet times, int start, int end,
+                         string seperator, string final,
+                         double (*get_num)(ProgramInfo))
 {
     int size = times.runs.size();
     string btwn = "";
     double sum = 0.0;
-    for (int i = 0; i < size; ++i) {
+    for (int i = start; i < end && i < size; ++i) {
         double t = get_num(times.runs[i]);
         if (report_all_times) {
             (*output) << btwn << setw(before_decimal + 1 + after_decimal)
                       << std::right << t;
+            if (i == end - 1) (*output) << final;
+            else if (i == size - 1) (*output) << seperator;
             btwn = seperator;
         }
         sum += t;
     }
-    if (report_avg) {
-        (*output) << btwn << setw(before_decimal + 1 + after_decimal)
-                  << std::right << (sum / size);
-    }
+    return sum;
 }
 
 
@@ -96,30 +102,98 @@ string Timer::repeat_char(char c, int times)
 
 void Timer::report_time(const TimeSet results)
 {
-    int size = results.runs.size();
-    if (size > 0) {
-        (*output) << make_header(results) << endl;
-        (*output) << repeat_char(' ', 8);
-        if (report_all_times) {
-            for (int j = 0; j < size; ++j) {
-                (*output) << "TRIAL " << j;
-                (*output) << repeat_char(' ',
-                            (before_decimal + 2 + after_decimal + spaces)
-                                - (6 + num_digits(j)));
-            }
-        }
-        if (report_avg) (*output) << "  AVG";
-        (*output) << endl;
-        (*output) << "Real:   ";
-        print_line(results, "s" + repeat_char(' ', spaces), get_real);
-        (*output) << "s" << endl << "User:   ";
-        print_line(results, "s" + repeat_char(' ', spaces), get_user);
-        (*output) << "s" << endl << "System: ";
-        print_line(results, "s" + repeat_char(' ', spaces), get_sys);
-        (*output) << "s" << endl << endl;
+    if (report_all_times) {
+        report_runs(results);
+    } else if (report_avg) {
+        report_avg_alone(results);
     }
 }
 
+
+void Timer::report_runs(const TimeSet results)
+{
+    unsigned size = results.runs.size();
+    if (size == 0) return;
+    unsigned test_width = before_decimal + 2 + after_decimal;
+    double real_total = 0, user_total = 0, sys_total = 0;
+    string between = "s" + repeat_char(' ', spaces);
+    unsigned columns = (width + spaces - 8) / (test_width + spaces);
+    unsigned current_column = 0;
+
+    (*output) << make_header(results) << endl;
+    while (current_column <= size) {
+        bool on_last_line = current_column + columns > size;
+        (*output) << repeat_char(' ', 8);
+        if (report_all_times) {
+            for (unsigned j = current_column;
+                 j < current_column + columns && j < size; ++j) {
+                (*output) << "TRIAL " << j;
+                (*output) << repeat_char(' ',
+                                         (test_width + spaces)
+                                          - (6 + num_digits(j)));
+            }
+        }
+        if (report_avg && on_last_line) (*output) << "  AVG";
+        (*output) << endl;
+        (*output) << "Real:   ";
+        real_total += print_line(results, current_column,
+                                 current_column + columns, between, "s",
+                                 get_real);
+        if (report_avg && on_last_line) {
+            (*output) << setw(before_decimal + 1 + after_decimal)
+                      << std::right << (real_total / size) << "s";
+        }
+        (*output) << endl << "User:   ";
+        user_total += print_line(results, current_column,
+                                 current_column + columns, between, "s",
+                                 get_user);
+        if (report_avg && on_last_line) {
+            (*output) << setw(before_decimal + 1 + after_decimal)
+                      << std::right << (user_total / size) << "s";
+        }
+        (*output) << endl << "System: ";
+        sys_total += print_line(results, current_column,
+                                 current_column + columns, between, "s",
+                                 get_sys);
+        if (report_avg && on_last_line) {
+            (*output) << setw(before_decimal + 1 + after_decimal)
+                      << std::right << (sys_total / size) << "s";
+        }
+        (*output) << endl << endl;
+        current_column += columns;
+    }
+}
+
+
+static double average(const TimeSet times, double (*get_num)(ProgramInfo))
+{
+    int size = times.runs.size();
+    double sum = 0.0;
+    for (int i = 0; i < size; ++i) {
+        sum += get_num(times.runs[i]);
+    }
+    return sum / size;
+}
+
+void Timer::report_avg_alone(const TimeSet results)
+{
+    unsigned size = results.runs.size();
+    if (size == 0) return;
+
+    (*output) << make_header(results) << endl;
+    (*output) << repeat_char(' ', 8);
+    (*output) << "  AVG" << endl;
+    (*output) << "Real:   ";
+    (*output) << setw(before_decimal + 1 + after_decimal)
+              << std::right << average(results, get_real) << "s";
+    (*output) << endl << "User:   ";
+    (*output) << setw(before_decimal + 1 + after_decimal)
+              << std::right << average(results, get_user) << "s";
+    (*output) << endl << "System: ";
+    (*output) << setw(before_decimal + 1 + after_decimal)
+              << std::right << average(results, get_sys) << "s";
+    (*output) << endl << endl;
+}
 
 void Timer::report_times(const vector<TimeSet> all_results)
 {
@@ -167,6 +241,12 @@ Timer &Timer::precision_after_decimal(unsigned p)
 Timer &Timer::precision_before_decimal(unsigned p)
 {
     before_decimal = p;
+    return *this;
+}
+
+Timer &Timer::line_width(unsigned w)
+{
+    width = w;
     return *this;
 }
 

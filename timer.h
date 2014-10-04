@@ -20,8 +20,6 @@
  *    TimeSet structs.  It simply calls Timer::report_time() on each.        *
  *                                                                           *
  *  TO DO:                                                                   *
- *   - Allow user to specify a maximum width to print.  If the information   *
- *     would overflow, move on to a new set of lines.                        *
 \*---------------------------------------------------------------------------*/
 #ifndef TIMER_H_INCLUDED
 #define TIMER_H_INCLUDED
@@ -52,6 +50,7 @@ public:
     Timer &report_all();
     Timer &precision_after_decimal(unsigned p);
     Timer &precision_before_decimal(unsigned p);
+    Timer &line_width(unsigned w);
     Timer &spacing(unsigned n);
     Timer &set_output(std::ostream *stream);
 
@@ -62,10 +61,14 @@ private:
     unsigned before_decimal;
     unsigned after_decimal;
     unsigned spaces;
+    unsigned width;
     std::ostream *output;
     std::string make_header(TimeSet test);
-    void print_line(const TimeSet times, std::string seperator,
-                       double (*get_num)(ProgramInfo));
+    double print_line(const TimeSet times, int start, int end,
+                      std::string seperator, std::string final,
+                      double (*get_num)(ProgramInfo));
+    void report_runs(const TimeSet results);
+    void report_avg_alone(const TimeSet results);
     std::string repeat_char(char c, int times);
 };
 
