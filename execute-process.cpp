@@ -7,7 +7,6 @@
  *    exception messages.                                                    *
  *                                                                           *
  *  TO DO:                                                                   *
- *   - Handle signals by sending them to the child process instead.          *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <unistd.h>
@@ -18,16 +17,40 @@
 #include "execute-process.h"
 using namespace std;
 
+
+static pid_t child_id = 0;
+
+static struct sigaction sact;
+
+static void signal_handler(int signum)
+{
+    if (child_id && !kill(child_id, signum)){
+        sigaction(signum, &sact, NULL);
+    } else {
+        exit(signum);
+    }
+}
+
+static void set_signal_handler()
+{
+    sact.sa_handler = signal_handler;
+    sact.sa_flags = SA_RESTART;
+    sigaction(SIGTERM, &sact, NULL);
+    sigaction(SIGINT, &sact, NULL);
+}
+
+
+
 ProgramInfo execute_process(string name, char *argv[],
                   FILE *input, FILE *output, FILE *errput,
                   unsigned max_cpu_time)
 {
-    pid_t child_id;
     int exit_status;
     timeval before, after;
     rlimit time_limit;
     rusage time_taken;
     ProgramInfo r_val;
+    set_signal_handler();
 
     gettimeofday(&before, NULL);
     if ((child_id = fork())) {
