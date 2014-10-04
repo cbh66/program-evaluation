@@ -23,7 +23,6 @@
  *     with a success message is returned.                                   *
  *                                                                           *
  *  TO DO:                                                                   *
- *   - Add inverse methods to deactive options that have been set.           *
 \*---------------------------------------------------------------------------*/
 #ifndef TESTER_H_INCLUDED
 #define TESTER_H_INCLUDED
@@ -44,9 +43,13 @@ public:
     Tester &set_comparison_file(std::string filename);
 
     Tester &ignore_whitespace();
+    Tester &consider_whitespace();
     Tester &ignore_char(char c);
+    Tester &heed_char(char c);
+    Tester &heed_all_chars();
     Tester &ignore_extra_chars();
     Tester &ignore_too_few_chars();
+    Tester &expect_proper_length();
     Tester &print_on_success();
 
 private:

@@ -133,9 +133,36 @@ Tester &Tester::ignore_whitespace()
 }
 
 
+Tester &Tester::consider_whitespace()
+{
+    ignore_spaces = false;
+    return *this;
+}
+
+
 Tester &Tester::ignore_char(char c)
 {
     chars_to_ignore += c;
+    return *this;
+}
+
+
+Tester &Tester::heed_char(char c)
+{
+    string result = "";
+    unsigned len = chars_to_ignore.length();
+    for (unsigned i = 0; i < len; ++i) {
+        if (chars_to_ignore[i] != c) result += chars_to_ignore[i];
+    }
+    chars_to_ignore = result;
+    return *this;
+}
+
+
+Tester &Tester::heed_all_chars()
+{
+    chars_to_ignore = "";
+    ignore_spaces = false;
     return *this;
 }
 
@@ -150,6 +177,14 @@ Tester &Tester::ignore_extra_chars()
 Tester &Tester::ignore_too_few_chars()
 {
     ignore_truncation = true;
+    return *this;
+}
+
+
+Tester &Tester::expect_proper_length()
+{
+    ignore_truncation = false;
+    ignore_extras = false;
     return *this;
 }
 
