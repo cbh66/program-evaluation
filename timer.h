@@ -10,7 +10,7 @@
  *    and finally call one of the report methods.                            *
  *                                                                           *
  *  Timer::report_run() prints to cout the information stored in a single    *
- *    ProgramInfo struct.    -- THIS FUNCTION IS NOT YET IMPLEMENTED --      *
+ *    ProgramInfo struct.                                                    *
  *  Timer::report_time() prints to cout the information stored in a single   *
  *    TimeSet.  It precedes the report with the name of the test, input file *
  *    output file, and/or err file.  It then prints each run of the test as  *

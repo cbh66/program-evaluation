@@ -4,7 +4,6 @@
  *  This implementation depends on the string, iostream, and iomanip         *
  *    libraries.                                                             *
  *  TO DO:                                                                   *
- *   - Write report_run()                                                    *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <iomanip>
@@ -19,30 +18,6 @@ Timer::Timer()
     after_decimal = 4;
     spaces = 4;
     output = &cout;
-}
-
-
-void Timer::report_run(ProgramInfo result)
-{
-
-}
-
-
-void Timer::print_line(const TimeSet times, const string seperator,
-                       double (*get_num)(ProgramInfo))
-{
-    int size = times.runs.size();
-    string btwn = "";
-    double sum = 0.0;
-    for (int i = 0; i < size; ++i) {
-        double t = get_num(times.runs[i]);
-        (*output) << btwn << setw(before_decimal + 1 + after_decimal) << std::right
-             << t;
-        sum += t;
-        btwn = seperator;
-    }
-    (*output) << btwn << setw(before_decimal + 1 + after_decimal) << std::right
-         << (sum / size);
 }
 
 
@@ -63,6 +38,37 @@ static double get_sys(ProgramInfo p)
     return (double) p.sys_sec
         + ((double) p.sys_usec / 1000000.0);
 }
+
+
+void Timer::report_run(ProgramInfo result)
+{
+        (*output) << "Real:   ";
+        (*output) << get_real(result);
+        (*output) << "s" << endl << "User:   ";
+        (*output) << get_user(result);
+        (*output) << "s" << endl << "System: ";
+        (*output) << get_sys(result);
+        (*output) << "s" << endl << endl;
+}
+
+
+void Timer::print_line(const TimeSet times, const string seperator,
+                       double (*get_num)(ProgramInfo))
+{
+    int size = times.runs.size();
+    string btwn = "";
+    double sum = 0.0;
+    for (int i = 0; i < size; ++i) {
+        double t = get_num(times.runs[i]);
+        (*output) << btwn << setw(before_decimal + 1 + after_decimal) << std::right
+             << t;
+        sum += t;
+        btwn = seperator;
+    }
+    (*output) << btwn << setw(before_decimal + 1 + after_decimal) << std::right
+         << (sum / size);
+}
+
 
 
 string Timer::repeat_char(char c, int times)
