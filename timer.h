@@ -57,13 +57,15 @@ public:
     Timer &set_output(std::ostream *stream);
 
 private:
+    std::string header;
     bool report_avg;
     bool report_all_times;
     unsigned before_decimal;
     unsigned after_decimal;
     unsigned spaces;
     std::ostream *output;
-    void print_line(const TimeSet times, const std::string seperator,
+    std::string make_header(TimeSet test);
+    void print_line(const TimeSet times, std::string seperator,
                        double (*get_num)(ProgramInfo));
     std::string repeat_char(char c, int times);
 };

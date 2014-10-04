@@ -78,7 +78,7 @@ void Timer::report_time(const TimeSet results)
 {
     int size = results.runs.size();
     if (size > 0) {
-        (*output) << results.input_file << endl;
+        (*output) << make_header(results) << endl;
         (*output) << repeat_char(' ', 8);
         if (report_all_times) {
             for (int j = 0; j < size; ++j) {
@@ -111,6 +111,7 @@ void Timer::report_times(const vector<TimeSet> all_results)
         ++it;
     }
 }
+
 
 
 Timer &Timer::report_only_avg()
@@ -159,4 +160,14 @@ Timer &Timer::set_output(ostream *stream)
 {
     output = stream;
     return *this;
+}
+
+
+string Timer::make_header(TimeSet test)
+{
+    if (test.test_name != "") return test.test_name;
+    if (test.input_file != "") return test.input_file;
+    if (test.output_file != "") return test.output_file;
+    if (test.err_file != "") return test.err_file;
+    return "Unknown test";
 }

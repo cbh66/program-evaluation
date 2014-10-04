@@ -20,6 +20,7 @@
  *  TO DO:                                                                   *
  *   - Add options to add individual input and output files                  *
  *   - Add options for outputting individual times, avg times, or both.      *
+ *   - Add options to be more specific about the headers for timing.         *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -33,7 +34,7 @@ using namespace std;
 
 
 const string VERSION_INFORMATION =
-    "Evaluate v1.2.0\n"
+    "Evaluate v1.2.1\n"
     "Copyright (C) 2014 Colin B Hamilton\n"
     "This is free software: you are free to change and redistribute it.\n"
     "There is NO WARRANTY, to the extent permitted by law.";
@@ -48,6 +49,7 @@ struct ProgramOptions {
     string output_dir;
     string input_suffix;
     string output_suffix;
+    string timer_header;
     bool just_test;
     bool just_time;
     bool be_quiet;
@@ -323,6 +325,7 @@ void evaluate(string name, vector<string> args,
         results.push_back(these_tests);
         results.back().input_file = inputs[i];
         results.back().output_file = outputs[i];
+        results.back().test_name = fs::path(inputs[i]).filename().native();
     }
     if (opts->just_time) {
         tim.report_times(results);
