@@ -19,6 +19,8 @@
  *                                                                           *
  *  TO DO:                                                                   *
  *   - Add options to be more specific about the headers for timing.         *
+ *   - Add options to save the output of a test somewhere.  Give a directory *
+ *     and specify saving all files or just failed files.                    *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -441,6 +443,7 @@ void evaluate(string name, vector<string> args,
     if (opts->just_time) {
         tim.report_times(results);
     }
+    fs::remove(temp_input);
     fs::remove(temp_output);
 }
 

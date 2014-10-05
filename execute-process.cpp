@@ -7,6 +7,10 @@
  *    exception messages.                                                    *
  *                                                                           *
  *  TO DO:                                                                   *
+ *   - Schedule an alarm signal for the parent based on max_cpu_time.  This  *
+ *     parameter can then be used for the maximum _real_ time - ie. when     *
+ *     that much real time has passed, the child is killed.  This prevents   *
+ *     a child blocking for a long time, taking up real time but not cpu time*
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <unistd.h>
@@ -96,9 +100,14 @@ ProgramInfo execute_process(string name, char *argv[],
                   string input, string output, string errput,
                   unsigned max_cpu_time)
 {
-    FILE *in = fopen(input.c_str(), "r");
-    FILE *out = fopen(output.c_str(), "w");
-    FILE *err = fopen(errput.c_str(), "w");
+    FILE *in, *out, *err;
+    if (input == "") in = stdin;
+    else in = fopen(input.c_str(), "r");
+    if (output == "") out = stdout;
+    else out = fopen(output.c_str(), "w");
+    if (errput == "") err = stderr;
+    else err = fopen(errput.c_str(), "w");
+
     ProgramInfo r_val = execute_process(name, argv,
                                         in, out, err, max_cpu_time);
     if (in != NULL)  fclose(in);
