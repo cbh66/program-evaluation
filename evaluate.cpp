@@ -21,6 +21,8 @@
  *   - Add options to be more specific about the headers for timing.         *
  *   - Add options to save the output of a test somewhere.  Give a directory *
  *     and specify saving all files or just failed files.                    *
+ *   - Add option to display exit codes of each test (or just failed tests)  *
+ *   - Alphebatize options?                                                  *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -62,7 +64,8 @@ struct ProgramOptions {
     bool avg_time;
     bool ignore_space;
     unsigned times;
-    unsigned max_time;
+    unsigned max_cpu;
+    unsigned max_real;
     unsigned time_precision;
     unsigned spacing;
     unsigned max_width;
@@ -155,9 +158,12 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
             "Run verbosely, reporting detailed results of all tests")
         ("all-tests,a", po::bool_switch(&(opts->all_tests)),
             "Report results of all tests, not just the first")
-        ("max-time,x", po::value<unsigned>(&(opts->max_time))
+        ("max-cpu,c", po::value<unsigned>(&(opts->max_cpu))
                             ->default_value(0),
-            "Set a time limit for each test in seconds (0 for no limit)")
+            "Set a CPU time limit for each test in seconds (0 for no limit)")
+        ("max-real,r", po::value<unsigned>(&(opts->max_real))
+                            ->default_value(0),
+            "Set a real-time limit for each test in seconds (0 for no limit)")
         ("ignore-space,i", po::bool_switch(&(opts->ignore_space)),
             "Ignore whitespace when testing program's output")
         ("ignore,I", po::value<string>(&(opts->ignore_chars)),
@@ -402,7 +408,8 @@ void evaluate(string name, vector<string> args,
                 these_tests.runs.push_back(execute_process(name,
                                                 vector_to_argv(name, &args),
                                                 input_file, temp_output, "",
-                                                opts->max_time));
+                                                opts->max_cpu,
+                                                opts->max_real));
                 if (opts->just_test && (opts->all_tests || j == 0)) {
                     tes.set_benchmark_file(outputs[i])
                        .set_comparison_file(temp_output);

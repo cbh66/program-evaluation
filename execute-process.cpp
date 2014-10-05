@@ -45,7 +45,7 @@ static void set_signal_handler()
 
 ProgramInfo execute_process(string name, char *argv[],
                   FILE *input, FILE *output, FILE *errput,
-                  unsigned max_cpu_time)
+                  unsigned max_cpu_time, unsigned max_real_time)
 {
     int exit_status;
     timeval before, after;
@@ -57,7 +57,7 @@ ProgramInfo execute_process(string name, char *argv[],
     gettimeofday(&before, NULL);
     if ((child_id = fork())) {
         if (child_id < 0) throw string("could not open process");
-        alarm(max_cpu_time);
+        alarm(max_real_time);
         wait3(&exit_status, 0, &time_taken);
         gettimeofday(&after, NULL);
         if (WIFSIGNALED(exit_status)) {
@@ -97,7 +97,7 @@ ProgramInfo execute_process(string name, char *argv[],
 
 ProgramInfo execute_process(string name, char *argv[],
                   string input, string output, string errput,
-                  unsigned max_cpu_time)
+                  unsigned max_cpu_time, unsigned max_real_time)
 {
     FILE *in, *out, *err;
     if (input == "") in = stdin;
@@ -108,7 +108,8 @@ ProgramInfo execute_process(string name, char *argv[],
     else err = fopen(errput.c_str(), "w");
 
     ProgramInfo r_val = execute_process(name, argv,
-                                        in, out, err, max_cpu_time);
+                                        in, out, err,
+                                        max_cpu_time, max_real_time);
     if (in != NULL)  fclose(in);
     if (out != NULL) fclose(out);
     if (err != NULL) fclose(err);
