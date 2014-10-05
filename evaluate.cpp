@@ -23,7 +23,6 @@
  *   - Separate options into categories for organization & brevity           *
  *   - Add options for lenient testing making use of methods already in the  *
  *     Tester class.                                                         *
- *   - Add --indicate-progress option, to output the test being run          *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -111,10 +110,16 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
 {
     namespace po = boost::program_options;
     po::variables_map args;
-    po::options_description generic("Generic options");
+    po::options_description general("General options");
+    po::options_description testing("Testing options");
+    po::options_description timing("Timing options");
+    po::options_description all("All options");
     po::positional_options_description p_desc;
-    generic.add_options()
-        ("help,h", "Produce help message")
+    general.add_options()
+        ("help,h", "Produce general help message")
+        ("help-detailed,H", "Produce detailed help message of all options")
+        ("help-testing", "Produce help message for testing")
+        ("help-timing", "Produce help message for timing")
         ("version,v", "Produce version, origin, and legal information")
         ("program", po::value<string>(&(opts->program_name))->required(),
             "Specify executable to run")
@@ -123,7 +128,7 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
         ("input-dir,d", po::value<string>(&(opts->input_dir)),
             "Specify the directory containing input files")
         ("output-dir,D", po::value<string>(&(opts->output_dir)),
-            "Specify the directory containing input files")
+            "Specify the directory containing output files")
         ("input-ext,e", po::value<string>(&(opts->input_suffix)),
             "Specify the suffix (eg. an extension) identifying input files")
         ("output-ext,E", po::value<string>(&(opts->output_suffix)),
@@ -132,49 +137,71 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
             "Only run tests, do not time")
         ("time,m", po::bool_switch(&(opts->just_time)),
             "Only time, do not evaluate tests")
+        ("times,t", po::value<unsigned>(&(opts->times))
+                            ->default_value(1),
+            "Specify number of times to run each test")
+    ;
+    testing.add_options()
         ("quiet,q", po::bool_switch(&(opts->be_quiet)),
             "Run quietly, only reporting failures")
         ("loud,l", po::bool_switch(&(opts->be_verbose)),
             "Run verbosely, reporting detailed results of all tests")
-        ("times,t", po::value<unsigned>(&(opts->times))
-                            ->default_value(1),
-            "Specify number of times to run each test")
         ("all-tests,a", po::bool_switch(&(opts->all_tests)),
             "Report results of all tests, not just the first")
         ("max-time,m", po::value<unsigned>(&(opts->max_time))
                             ->default_value(0),
             "Set a time limit for each test in seconds (0 for no limit)")
+    ;
+    timing.add_options()
         ("precision,p", po::value<unsigned>(&(opts->time_precision))
                             ->default_value(4),
-            "Set decimal precision for output of timing")
+            "Set decimal precision for timing output")
         ("spacing,S", po::value<unsigned>(&(opts->spacing))
                             ->default_value(2),
             "Specify spacing between columns in timing report")
         ("all-times,A", po::bool_switch(&(opts->all_times)),
             "Report results of all timing tests")
-        ("avg-time,v", po::bool_switch(&(opts->avg_time)),
+        ("avg-time,g", po::bool_switch(&(opts->avg_time)),
             "Report the average results for each timing test")
         ("max-width,w", po::value<unsigned>(&(opts->max_width))
                             ->default_value(80),
             "Specify the maximum width of a line for a better"
             " formatted timing report")
     ;
+    all.add(general).add(testing).add(timing);
     p_desc.add("program", 1);
     p_desc.add("arg", -1);
     try {
         po::store(po::command_line_parser(argc, argv).
-                  options(generic).positional(p_desc).run(), args);
+                  options(all).positional(p_desc).run(), args);
         po::notify(args);
     } catch (exception &err) {
-        if (!args.count("help") && !args.count("version")) {
+        if (!args.count("help") && !args.count("help-detailed")
+            && !args.count("help-testing") && !args.count("help-timing")
+            && !args.count("version")) {
             cerr << "Error in arguments: " << err.what() << endl;
             cerr << "(For help, use the --help or -h options)" << endl;
             exit(1);
         }
     }
+    if (args.count("help-detailed")) {
+        cout << USAGE_INFORMATION << endl;
+        cout << all;
+        exit(0);
+    }
+    if (args.count("help-testing")) {
+        cout << USAGE_INFORMATION << endl;
+        cout << testing;
+        exit(0);
+    }
+    if (args.count("help-timing")) {
+        cout << USAGE_INFORMATION << endl;
+        cout << timing;
+        exit(0);
+    }
     if (args.count("help")) {
         cout << USAGE_INFORMATION << endl;
-        cout << generic;
+        cout << general;
         exit(0);
     }
     if (args.count("version")) {
@@ -317,6 +344,11 @@ void evaluate(string name, vector<string> args,
     for (unsigned i = 0; i < len; ++i) {
         TimeSet these_tests;
         for (unsigned j = 0; j < opts->times; ++j) {
+            string current_ifile = fs::path(inputs[i]).filename().native();
+            if (current_ifile == "") current_ifile = "/no input/";
+            if (opts->be_verbose) {
+                cerr << "Testing on " << current_ifile << endl;
+            }
             try {
                 these_tests.runs.push_back(execute_process(name,
                                                 vector_to_argv(name, &args),
@@ -328,22 +360,22 @@ void evaluate(string name, vector<string> args,
                     if (opts->be_quiet) {
                         if (!tes.run()) {
                             cout << "Failed on input "
-                                 << fs::path(inputs[i]).filename().native()
+                                 << current_ifile
                                  << endl;
                         }
                     } else {
                         string result = tes.run_verbosely();
                         if (result != "") {
                             cout << "On input "
-                                 << fs::path(inputs[i]).filename().native()
+                                 << current_ifile
                                  << ": " << endl << result << endl;
                         }
 
                     }
                 }
             } catch (string err) {
-                cerr << "Error on input " << fs::path(inputs[i]).filename().native()
-                     << ": " << err << endl;
+                cerr << "Error on input " << current_ifile
+                     << ": " << err << endl << endl;
             }
         }
         results.push_back(these_tests);
