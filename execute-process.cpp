@@ -7,10 +7,6 @@
  *    exception messages.                                                    *
  *                                                                           *
  *  TO DO:                                                                   *
- *   - Schedule an alarm signal for the parent based on max_cpu_time.  This  *
- *     parameter can then be used for the maximum _real_ time - ie. when     *
- *     that much real time has passed, the child is killed.  This prevents   *
- *     a child blocking for a long time, taking up real time but not cpu time*
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <unistd.h>
@@ -28,6 +24,7 @@ static struct sigaction sact;
 
 static void signal_handler(int signum)
 {
+    if (signum == SIGALRM) signum = SIGTERM;
     if (child_id && !kill(child_id, signum)){
         sigaction(signum, &sact, NULL);
     } else {
@@ -41,6 +38,7 @@ static void set_signal_handler()
     sact.sa_flags = SA_RESTART;
     sigaction(SIGTERM, &sact, NULL);
     sigaction(SIGINT, &sact, NULL);
+    sigaction(SIGALRM, &sact, NULL);
 }
 
 
@@ -59,6 +57,7 @@ ProgramInfo execute_process(string name, char *argv[],
     gettimeofday(&before, NULL);
     if ((child_id = fork())) {
         if (child_id < 0) throw string("could not open process");
+        alarm(max_cpu_time);
         wait3(&exit_status, 0, &time_taken);
         gettimeofday(&after, NULL);
         if (WIFSIGNALED(exit_status)) {
