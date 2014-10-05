@@ -69,6 +69,7 @@ private:
                       double (*get_num)(ProgramInfo));
     void report_runs(const TimeSet results);
     void report_avg_alone(const TimeSet results);
+    void verify_dimensions(unsigned num_tests);
     std::string repeat_char(char c, int times);
 };
 

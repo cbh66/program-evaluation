@@ -21,6 +21,9 @@
  *   - Add options to add individual input and output files                  *
  *   - Add options to be more specific about the headers for timing.         *
  *   - Separate options into categories for organization & brevity           *
+ *   - Add options for lenient testing making use of methods already in the  *
+ *     Tester class.                                                         *
+ *   - Add --indicate-progress option, to output the test being run          *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>

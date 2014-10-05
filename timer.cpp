@@ -4,10 +4,6 @@
  *  This implementation depends on the string, iostream, and iomanip         *
  *    libraries.                                                             *
  *  TO DO:                                                                   *
- *   - Add verification before printing, that the columns have well-defined  *
- *     width.  That is, that the number of digits printed for each test is   *
- *     less than the width of the column.  If not, more spaces can be added  *
- *     to the column header (ie spaces can be set to the lowest valid number)*
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <iomanip>
@@ -102,6 +98,7 @@ string Timer::repeat_char(char c, int times)
 
 void Timer::report_time(const TimeSet results)
 {
+    verify_dimensions(results.runs.size());
     if (report_all_times) {
         report_runs(results);
     } else if (report_avg) {
@@ -118,6 +115,7 @@ void Timer::report_runs(const TimeSet results)
     double real_total = 0, user_total = 0, sys_total = 0;
     string between = "s" + repeat_char(' ', spaces);
     unsigned columns = (width + spaces - 8) / (test_width + spaces);
+    if (columns == 0) return;
     unsigned current_column = 0;
 
     (*output) << make_header(results) << endl;
@@ -271,4 +269,27 @@ string Timer::make_header(TimeSet test)
     if (test.output_file != "") return test.output_file;
     if (test.err_file != "") return test.err_file;
     return "Unknown test";
+}
+
+/*  First test:  Is there enough padding between numbers?
+ *    A single entry has the size of its number plus its spaces.
+ *    There should be enough space to fit the longest column header, which
+ *    is "TRIAL " + test number.  Hence its size is "TRIAL ".length() +
+ *    num_digits(last test's number).
+ *  Second test:  Is the max width wide enough to fit at least one column?
+ *    It must be able to fit the size of the labels ("System: ".length())
+ *    plus the size of a column (the larger of the size of a number and the
+ *    size of the header).
+ */
+void Timer::verify_dimensions(unsigned num_tests)
+{
+    if (num_tests == 0) return;
+    unsigned num_size = before_decimal + 2 + after_decimal;
+    unsigned header_size = 6 + num_digits(num_tests - 1);
+    if (num_size + spaces < header_size) {
+        spaces = header_size - num_size;
+    }
+    if (width < 8 + header_size || width < 8 + num_size) {
+        width = (header_size < num_size) ? (8 + num_size) : (8 + header_size);
+    }
 }
