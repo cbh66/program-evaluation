@@ -44,6 +44,8 @@ const string USAGE_INFORMATION =
 struct ProgramOptions {
     string program_name;
     vector<string> args;
+    vector<string> inputs;
+    vector<string> outputs;
     string input_dir;
     string output_dir;
     string input_suffix;
@@ -84,7 +86,6 @@ int main(int argc, char *argv[])
     ProgramOptions opts;
     parse_command_line_args(argc, argv, &opts);
     if (opts.ignore_space) tes.ignore_whitespace();
-    if (opts.be_verbose) tes.print_on_success();
     tes.ignore_chars(opts.ignore_chars);
     if (opts.all_times) {
         if (opts.avg_time) tim.report_all();
@@ -95,9 +96,10 @@ int main(int argc, char *argv[])
     tim.precision_after_decimal(opts.time_precision).spacing(opts.spacing)
        .line_width(opts.max_width);
 
-    get_io(inputs, outputs, opts.input_dir, opts.output_dir,
+    get_io(opts.inputs, opts.outputs, opts.input_dir, opts.output_dir,
            opts.input_suffix, opts.output_suffix);
-    evaluate(opts.program_name, opts.args, inputs, outputs, &opts, tim, tes);
+    evaluate(opts.program_name, opts.args, opts.inputs, opts.outputs,
+             &opts, tim, tes);
 
     return 0;
 }
@@ -341,6 +343,7 @@ void evaluate(string name, vector<string> args,
     namespace fs = boost::filesystem;
     vector<TimeSet> results;
     unsigned len = inputs.size();
+    unsigned successful = 0;
     string temp_file = fs::temp_directory_path().native()
                             + fs::unique_path().native() + ".eval";
     if (len != outputs.size()) {
@@ -351,8 +354,9 @@ void evaluate(string name, vector<string> args,
         for (unsigned j = 0; j < opts->times; ++j) {
             string current_ifile = fs::path(inputs[i]).filename().native();
             if (current_ifile == "") current_ifile = "/no input/";
-            if (opts->be_verbose) {
-                cerr << "Testing on " << current_ifile << endl;
+            if (!opts->be_quiet) {
+                cout << "On input " << current_ifile;
+                cout.flush();
             }
             try {
                 these_tests.runs.push_back(execute_process(name,
@@ -367,26 +371,35 @@ void evaluate(string name, vector<string> args,
                             cout << "Failed on input "
                                  << current_ifile
                                  << endl;
+                        } else {
+                            ++successful;
                         }
                     } else {
                         string result = tes.run_verbosely();
                         if (result != "") {
-                            cout << "On input "
-                                 << current_ifile
-                                 << ": " << endl << result << endl;
+                            cout << ":" << endl << result << endl;
+                        } else {
+                            ++successful;
+                            if (opts->be_verbose) {
+                                cout << ":" << endl << "Passed";
+                            }
+                            cout << endl << endl;
                         }
 
                     }
                 }
             } catch (string err) {
-                cerr << "Error on input " << current_ifile
-                     << ": " << err << endl << endl;
+                if (opts->be_quiet) cout << "On input " << current_ifile;
+                cout << ":" << endl << "Error: " << err << endl << endl;
             }
         }
         results.push_back(these_tests);
         results.back().input_file = inputs[i];
         results.back().output_file = outputs[i];
         results.back().test_name = fs::path(inputs[i]).filename().native();
+    }
+    if (opts->just_test) {
+        cout << "Final: Passed (" << successful << "/" << len << ")" << endl;
     }
     if (opts->just_time) {
         tim.report_times(results);
