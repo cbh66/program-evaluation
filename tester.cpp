@@ -12,8 +12,7 @@
  *   - Allow for more detailed error reporting by a more sophisticated       *
  *     file comparison algorithm.  It could be useful to report, e.g., a     *
  *     range of lines that failed, if the entire file didn't.  Or perhaps    *
- *     calculating something like what percentage matched.                   *
- *   - Escape characters in the string sent back                             *
+ *     calculating something like what percentage matched.                   *\
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <boost/lexical_cast.hpp>
@@ -78,7 +77,7 @@ string Tester::run_verbosely()
     string succ = on_success ? "Passed\n" : "";
     ifstream bench(benchmark_file.c_str());
     ifstream comp(comparison_file.c_str());
-    int col = 0;
+    int col = 1;
     int line = 1;
     char b_char = bench.peek();
     char c_char = comp.peek();
@@ -89,7 +88,9 @@ string Tester::run_verbosely()
             c_char = get_next_char(comp, &col, &line);
             if (!comp.eof()) {
                 return "Expected no output, got "
-                    + readable_char(c_char) + "\n";
+                    + readable_char(c_char)
+                    + " on line " + boost::lexical_cast<string>(line)
+                    + " col " + boost::lexical_cast<string>(col) + "\n";
             } else {
                 return succ;
             }
@@ -97,16 +98,14 @@ string Tester::run_verbosely()
     }
     if (!comp.is_open() || comp.eof()) {
         b_char = get_next_char(bench);
-        if (!comp.eof()) {
+        if (!bench.eof()) {
             return "Expected " + readable_char(b_char)
                 + ", got no output\n";
+        } else {
+            return succ;
         }
     }
-    if (!comp.is_open()) {
-        return "Could not open comparison file " + comparison_file
-            + " for reading\n";
-    }
-    
+
     b_char = get_next_char(bench);
     c_char = get_next_char(comp, &col, &line);
     while (!bench.eof() && !comp.eof()) {
@@ -119,11 +118,12 @@ string Tester::run_verbosely()
         }
         if (b_char == '\n') {
             ++line;
-            col = 0;
+            col = 1;
         }
         b_char = get_next_char(bench);
         c_char = get_next_char(comp, &col, &line);
     }
+
     if (bench.eof() && !comp.eof()) {
         return "Got more output than expected: did not expect "
             + readable_char(c_char) + " on line "
