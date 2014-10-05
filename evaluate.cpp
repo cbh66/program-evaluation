@@ -18,8 +18,9 @@
  *    modules.                                                               *
  *                                                                           *
  *  TO DO:                                                                   *
- *   - Add options to add individual input and output files                  *
  *   - Add options to be more specific about the headers for timing.         *
+ *   - Make stdin disctinct from "no input".  Perhaps allow stdout as output *
+ *     as well.                                                              *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -33,7 +34,7 @@ using namespace std;
 
 
 const string VERSION_INFORMATION =
-    "Evaluate v1.2.6\n"
+    "Evaluate v1.3.0\n"
     "Copyright (C) 2014 Colin B Hamilton\n"
     "This is free software: you are free to change and redistribute it.\n"
     "There is NO WARRANTY, to the extent permitted by law.";
@@ -127,6 +128,10 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
             "Specify executable to run")
         ("arg", po::value< vector<string> >(&(opts->args)),
             "Specify arguments to pass to the executable")
+        ("input-file,f", po::value< vector<string> >(&(opts->inputs)),
+            "Specify one or more input files")
+        ("output-file,F", po::value< vector<string> >(&(opts->outputs)),
+            "Specify one or more output files")
         ("input-dir,d", po::value<string>(&(opts->input_dir)),
             "Specify the directory containing input files")
         ("output-dir,D", po::value<string>(&(opts->output_dir)),
@@ -230,6 +235,16 @@ void verify_args(ProgramOptions *opts)
     if (opts->be_quiet && opts->be_verbose) {
         cerr << "Error in arguments: cannot be both quiet and loud!" << endl;
         exit(1);
+    }
+    int in_size = opts->inputs.size();
+    int out_size = opts->outputs.size();
+    while (in_size < out_size) {
+        opts->inputs.push_back("");
+        ++in_size;
+    }
+    while (out_size < in_size) {
+        opts->outputs.push_back("");
+        ++out_size;
     }
 }
 
@@ -353,7 +368,7 @@ void evaluate(string name, vector<string> args,
         TimeSet these_tests;
         for (unsigned j = 0; j < opts->times; ++j) {
             string current_ifile = fs::path(inputs[i]).filename().native();
-            if (current_ifile == "") current_ifile = "/no input/";
+            if (current_ifile == "") current_ifile = "/stdin/";
             if (!opts->be_quiet) {
                 cout << "On input " << current_ifile;
                 cout.flush();
@@ -377,20 +392,19 @@ void evaluate(string name, vector<string> args,
                     } else {
                         string result = tes.run_verbosely();
                         if (result != "") {
-                            cout << ":" << endl << result << endl;
+                            cout << ":" << endl << ">> " << result;
                         } else {
                             ++successful;
                             if (opts->be_verbose) {
-                                cout << ":" << endl << "Passed";
+                                cout << ":" << endl << "> Passed";
                             }
-                            cout << endl << endl;
+                            cout << endl;
                         }
-
                     }
                 }
             } catch (string err) {
                 if (opts->be_quiet) cout << "On input " << current_ifile;
-                cout << ":" << endl << "Error: " << err << endl << endl;
+                cout << ":" << endl << ">>> Error: " << err << endl;
             }
         }
         results.push_back(these_tests);

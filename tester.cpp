@@ -77,7 +77,7 @@ string Tester::run_verbosely()
     string succ = on_success ? "Passed\n" : "";
     ifstream bench(benchmark_file.c_str());
     ifstream comp(comparison_file.c_str());
-    int col = 1;
+    int col = 0;
     int line = 1;
     char b_char = bench.peek();
     char c_char = comp.peek();
@@ -118,7 +118,7 @@ string Tester::run_verbosely()
         }
         if (b_char == '\n') {
             ++line;
-            col = 1;
+            col = 0;
         }
         b_char = get_next_char(bench);
         c_char = get_next_char(comp, &col, &line);
@@ -267,13 +267,18 @@ char Tester::get_next_char(ifstream &str)
 char Tester::get_next_char(ifstream &str, int *cols, int *lines)
 {
     char c = str.get();
-    while (!str.eof() && c != EOF && is_ignore_char(c)) {
         ++(*cols);
         if (c == '\n') {
             ++(*lines);
             *cols = 0;
         }
+    while (!str.eof() && c != EOF && is_ignore_char(c)) {
         c = str.get();
+        ++(*cols);
+        if (c == '\n') {
+            ++(*lines);
+            *cols = 0;
+        }
     }
     if (c == EOF) {
         str.clear(ios::eofbit);
