@@ -20,9 +20,6 @@
  *  TO DO:                                                                   *
  *   - Add options to add individual input and output files                  *
  *   - Add options to be more specific about the headers for timing.         *
- *   - Separate options into categories for organization & brevity           *
- *   - Add options for lenient testing making use of methods already in the  *
- *     Tester class.                                                         *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -36,7 +33,7 @@ using namespace std;
 
 
 const string VERSION_INFORMATION =
-    "Evaluate v1.2.5\n"
+    "Evaluate v1.2.6\n"
     "Copyright (C) 2014 Colin B Hamilton\n"
     "This is free software: you are free to change and redistribute it.\n"
     "There is NO WARRANTY, to the extent permitted by law.";
@@ -52,6 +49,7 @@ struct ProgramOptions {
     string input_suffix;
     string output_suffix;
     string timer_header;
+    string ignore_chars;
     bool just_test;
     bool just_time;
     bool be_quiet;
@@ -59,6 +57,7 @@ struct ProgramOptions {
     bool all_tests;
     bool all_times;
     bool avg_time;
+    bool ignore_space;
     unsigned times;
     unsigned max_time;
     unsigned time_precision;
@@ -84,8 +83,9 @@ int main(int argc, char *argv[])
     vector<string> inputs, outputs;
     ProgramOptions opts;
     parse_command_line_args(argc, argv, &opts);
-    tes.ignore_whitespace();
+    if (opts.ignore_space) tes.ignore_whitespace();
     if (opts.be_verbose) tes.print_on_success();
+    tes.ignore_chars(opts.ignore_chars);
     if (opts.all_times) {
         if (opts.avg_time) tim.report_all();
         else tim.dont_report_avg();
@@ -151,6 +151,11 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
         ("max-time,m", po::value<unsigned>(&(opts->max_time))
                             ->default_value(0),
             "Set a time limit for each test in seconds (0 for no limit)")
+        ("ignore-space,i", po::bool_switch(&(opts->ignore_space)),
+            "Ignore whitespace when testing program's output")
+        ("ignore,I", po::value<string>(&(opts->ignore_chars)),
+            "Specify a string containing characters to ignore "
+            "when testing program's output")
     ;
     timing.add_options()
         ("precision,p", po::value<unsigned>(&(opts->time_precision))

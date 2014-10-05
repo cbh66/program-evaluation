@@ -45,6 +45,7 @@ public:
     Tester &ignore_whitespace();
     Tester &consider_whitespace();
     Tester &ignore_char(char c);
+    Tester &ignore_chars(std::string s);
     Tester &heed_char(char c);
     Tester &heed_all_chars();
     Tester &ignore_extra_chars();

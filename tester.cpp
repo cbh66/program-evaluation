@@ -13,6 +13,7 @@
  *     file comparison algorithm.  It could be useful to report, e.g., a     *
  *     range of lines that failed, if the entire file didn't.  Or perhaps    *
  *     calculating something like what percentage matched.                   *
+ *   - Escape characters in the string sent back                             *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <boost/lexical_cast.hpp>
@@ -54,6 +55,24 @@ bool Tester::run()
 }
 
 
+static string readable_char(char c)
+{
+    string s = "'";
+    switch (c) {
+        case '\a':  s += "\\a";  break;
+        case '\b':  s += "\\b";  break;
+        case '\f':  s += "\\f";  break;
+        case '\n':  s += "\\n";  break;
+        case '\r':  s += "\\r";  break;
+        case '\t':  s += "\\t";  break;
+        case '\v':  s += "\\v";  break;
+        case '\0':  s += "\\0";  break;
+        default:    s += c;
+    }
+    s += "'";
+    return s;
+}
+
 string Tester::run_verbosely()
 {
     string succ = on_success ? "Passed\n" : "";
@@ -61,39 +80,42 @@ string Tester::run_verbosely()
     ifstream comp(comparison_file.c_str());
     int col = 0;
     int line = 1;
-    char b_char = get_next_char(bench);
-    char c_char = get_next_char(comp, &col, &line);
-    if (!bench.is_open()) {
+    char b_char = bench.peek();
+    char c_char = comp.peek();
+    if (!bench.is_open() || bench.eof()) {
         if (!comp.is_open() || comp.eof()) {
             return succ;
         } else {
-            return "Expected no output, got "
-                + boost::lexical_cast<string>(c_char) + "\n";
+            c_char = get_next_char(comp, &col, &line);
+            if (!comp.eof()) {
+                return "Expected no output, got "
+                    + readable_char(c_char) + "\n";
+            } else {
+                return succ;
+            }
         }
     }
-    if (bench.eof()) {
-        if (!comp.is_open() || comp.eof()) {
-            return succ;
-        } else {
-            return "Expected no output, got "
-                + boost::lexical_cast<string>(c_char) + "\n";
+    if (!comp.is_open() || comp.eof()) {
+        b_char = get_next_char(bench);
+        if (!comp.eof()) {
+            return "Expected " + readable_char(b_char)
+                + ", got no output\n";
         }
     }
     if (!comp.is_open()) {
         return "Could not open comparison file " + comparison_file
             + " for reading\n";
     }
-    if (comp.eof()) {
-        return "Expected " + boost::lexical_cast<string>(b_char)
-            + ", got no output\n";
-    }
+    
+    b_char = get_next_char(bench);
+    c_char = get_next_char(comp, &col, &line);
     while (!bench.eof() && !comp.eof()) {
         ++col;
         if (b_char != c_char) {
-            return "Expected " + boost::lexical_cast<string>(b_char)
-                + ", got " + boost::lexical_cast<string>(c_char)
+            return "Expected " + readable_char(b_char)
+                + ", got " + readable_char(c_char)
                 + " on line " + boost::lexical_cast<string>(line)
-                + " Col " + boost::lexical_cast<string>(col) + "\n";
+                + " col " + boost::lexical_cast<string>(col) + "\n";
         }
         if (b_char == '\n') {
             ++line;
@@ -103,14 +125,38 @@ string Tester::run_verbosely()
         c_char = get_next_char(comp, &col, &line);
     }
     if (bench.eof() && !comp.eof()) {
-        return "Got more output than expected\n";
+        return "Got more output than expected: did not expect "
+            + readable_char(c_char) + " on line "
+            + boost::lexical_cast<string>(line) + " col "
+            + boost::lexical_cast<string>(col) + "\n";
     }
     if (comp.eof() && !bench.eof()) {
-        return "Got less output than expected\n";
+        return "Got less output than expected: expected additional "
+            + readable_char(b_char) + " on line "
+            + boost::lexical_cast<string>(line) + " col "
+            + boost::lexical_cast<string>(col) + "\n";
     }
     return succ;
 }
 
+/* Function under consideration.
+ *   If implemented, it would work very much like a diff of the files.
+ * Of course, it's not a huge priority, as users can always call diff
+ *   themselves once they see what failed, if they want to know the details.
+ * Also, this function could just be implemented with a fork-exec of diff.
+ * Granted, that assumes diff is installed on the machine.
+string Tester::run_detailed()
+{
+      Current ideas:
+         Read both files in as two strings.
+         Compare them char-by-char until you find a difference.
+         Then, find the longest common substring of the two strings.
+         Recurse on the elements before and after this substring,
+           terminating when no elements are in common.
+         Once you find these, return the set of substrings that
+           differ, and translate into an error report.
+}
+*/
 
 Tester &Tester::set_benchmark_file(string filename)
 {
@@ -143,6 +189,13 @@ Tester &Tester::consider_whitespace()
 Tester &Tester::ignore_char(char c)
 {
     chars_to_ignore += c;
+    return *this;
+}
+
+
+Tester &Tester::ignore_chars(string s)
+{
+    chars_to_ignore += s;
     return *this;
 }
 
@@ -221,6 +274,9 @@ char Tester::get_next_char(ifstream &str, int *cols, int *lines)
             *cols = 0;
         }
         c = str.get();
+    }
+    if (c == EOF) {
+        str.clear(ios::eofbit);
     }
     return c;
 }
