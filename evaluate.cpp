@@ -19,8 +19,6 @@
  *                                                                           *
  *  TO DO:                                                                   *
  *   - Add options to be more specific about the headers for timing.         *
- *   - Make stdin disctinct from "no input".  Perhaps allow stdout as output *
- *     as well.                                                              *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -155,7 +153,7 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
             "Run verbosely, reporting detailed results of all tests")
         ("all-tests,a", po::bool_switch(&(opts->all_tests)),
             "Report results of all tests, not just the first")
-        ("max-time,m", po::value<unsigned>(&(opts->max_time))
+        ("max-time,x", po::value<unsigned>(&(opts->max_time))
                             ->default_value(0),
             "Set a time limit for each test in seconds (0 for no limit)")
         ("ignore-space,i", po::bool_switch(&(opts->ignore_space)),
@@ -236,8 +234,8 @@ void verify_args(ProgramOptions *opts)
         cerr << "Error in arguments: cannot be both quiet and loud!" << endl;
         exit(1);
     }
-    int in_size = opts->inputs.size();
-    int out_size = opts->outputs.size();
+    unsigned in_size = opts->inputs.size();
+    unsigned out_size = opts->outputs.size();
     while (in_size < out_size) {
         opts->inputs.push_back("");
         ++in_size;
@@ -245,6 +243,12 @@ void verify_args(ProgramOptions *opts)
     while (out_size < in_size) {
         opts->outputs.push_back("");
         ++out_size;
+    }
+    for (unsigned i = 0; i < out_size; ++i) {
+        if (opts->outputs[i] == "--") {
+            cerr << "Error: -- is not valid for output comparison" << endl;
+            exit(1);
+        }
     }
 }
 
@@ -321,8 +325,12 @@ void get_io(vector<string> &inputs, vector<string> &outputs, string input_dir,
 {
     namespace fs = boost::filesystem;
     vector<fs::path> temp_in, temp_out;
-    get_files_by_suffix(temp_in, input_dir, input_suffix);
-    get_files_by_suffix(temp_out, output_dir, output_suffix);
+    if (input_dir != "" || input_suffix != "") {
+        get_files_by_suffix(temp_in, input_dir, input_suffix);
+    }
+    if (output_dir != "" || output_suffix != "") {
+        get_files_by_suffix(temp_out, output_dir, output_suffix);
+    }
     unsigned i_len = temp_in.size();
     unsigned o_len = temp_out.size();
     unsigned i = 0, j = 0;
@@ -337,7 +345,8 @@ void get_io(vector<string> &inputs, vector<string> &outputs, string input_dir,
             inputs.push_back(cur_in.generic_string() + input_suffix);
             outputs.push_back(cur_out.generic_string() + output_suffix);
             ++i, ++j;
-        } else if (cur_in.filename() < cur_out.filename() && cur_in.filename() != "") {
+        } else if (cur_in.filename() < cur_out.filename()
+                   && cur_in.filename() != "") {
             inputs.push_back(cur_in.generic_string() + input_suffix);
             outputs.push_back("");
             ++i;
@@ -359,7 +368,10 @@ void evaluate(string name, vector<string> args,
     vector<TimeSet> results;
     unsigned len = inputs.size();
     unsigned successful = 0;
-    string temp_file = fs::temp_directory_path().native()
+    string temp_input = fs::temp_directory_path().native()
+                            + fs::unique_path().native() + ".eval";
+    fclose(fopen(temp_input.c_str(), "w"));  // Make new, empty file
+    string temp_output = fs::temp_directory_path().native()
                             + fs::unique_path().native() + ".eval";
     if (len != outputs.size()) {
         throw string("differing amounts of inputs and outputs");
@@ -367,24 +379,35 @@ void evaluate(string name, vector<string> args,
     for (unsigned i = 0; i < len; ++i) {
         TimeSet these_tests;
         for (unsigned j = 0; j < opts->times; ++j) {
-            string current_ifile = fs::path(inputs[i]).filename().native();
-            if (current_ifile == "") current_ifile = "/stdin/";
+            string input_name, input_file;
+            
+            if (inputs[i] == "") {
+                input_name = "/no input/";
+                input_file = temp_input;
+            }
+            else if (input_name == "--") {
+                input_name = "/stdin/";
+                input_file = "";
+            } else {
+                input_name = fs::path(inputs[i]).filename().native();
+                input_file = inputs[i];
+            }
             if (!opts->be_quiet) {
-                cout << "On input " << current_ifile;
+                cout << "On input " << input_name << endl;
                 cout.flush();
             }
             try {
                 these_tests.runs.push_back(execute_process(name,
                                                 vector_to_argv(name, &args),
-                                                inputs[i], temp_file, "",
+                                                input_file, temp_output, "",
                                                 opts->max_time));
                 if (opts->just_test && (opts->all_tests || j == 0)) {
                     tes.set_benchmark_file(outputs[i])
-                       .set_comparison_file(temp_file);
+                       .set_comparison_file(temp_output);
                     if (opts->be_quiet) {
                         if (!tes.run()) {
                             cout << "Failed on input "
-                                 << current_ifile
+                                 << input_name
                                  << endl;
                         } else {
                             ++successful;
@@ -392,19 +415,19 @@ void evaluate(string name, vector<string> args,
                     } else {
                         string result = tes.run_verbosely();
                         if (result != "") {
-                            cout << ":" << endl << ">> " << result;
+                            cout << ">> " << result;
                         } else {
                             ++successful;
                             if (opts->be_verbose) {
-                                cout << ":" << endl << "> Passed";
+                                cout << "> Passed";
                             }
                             cout << endl;
                         }
                     }
                 }
             } catch (string err) {
-                if (opts->be_quiet) cout << "On input " << current_ifile;
-                cout << ":" << endl << ">>> Error: " << err << endl;
+                if (opts->be_quiet) cout << "On input " << input_name;
+                cout << ">>> Error: " << err << endl;
             }
         }
         results.push_back(these_tests);
@@ -418,6 +441,6 @@ void evaluate(string name, vector<string> args,
     if (opts->just_time) {
         tim.report_times(results);
     }
-    fs::remove(temp_file);
+    fs::remove(temp_output);
 }
 
