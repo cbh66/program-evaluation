@@ -14,7 +14,7 @@
  *                                                                           *
  *  This main file primarily evaluates program options and finds specified   *
  *    files.  The evaluate() function contains the core of the program,      *
- *    and relies on functions for the execute-process, timer, and tester     *
+ *    and relies on functions from the execute-process, timer, and tester    *
  *    modules.                                                               *
  *                                                                           *
  *  TO DO:                                                                   *
@@ -22,7 +22,6 @@
  *   - Add options to save the output of a test somewhere.  Give a directory *
  *     and specify saving all files or just failed files.                    *
  *   - Add option to display exit codes of each test (or just failed tests)  *
- *   - Alphebatize options?                                                  *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -40,6 +39,9 @@ const string VERSION_INFORMATION =
     "Copyright (C) 2014 Colin B Hamilton\n"
     "This is free software: you are free to change and redistribute it.\n"
     "There is NO WARRANTY, to the extent permitted by law.";
+
+const string DESCRIPTION =
+    "Evaluate:  A program for testing and timing other programs";
 
 const string USAGE_INFORMATION =
     "Usage: evaluate [options] executable";
@@ -116,21 +118,22 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
 {
     namespace po = boost::program_options;
     po::variables_map args;
+    po::options_description program("Program options");
     po::options_description general("General options");
     po::options_description testing("Testing options");
     po::options_description timing("Timing options");
     po::options_description all("All options");
     po::positional_options_description p_desc;
-    general.add_options()
-        ("help,h", "Produce general help message")
-        ("help-detailed,H", "Produce detailed help message of all options")
-        ("help-testing", "Produce help message for testing")
-        ("help-timing", "Produce help message for timing")
+    program.add_options()
+        ("help,h", po::value<string>()->implicit_value(""),
+             "Produce help message")
         ("version,v", "Produce version, origin, and legal information")
         ("program", po::value<string>(&(opts->program_name))->required(),
             "Specify executable to run")
         ("arg", po::value< vector<string> >(&(opts->args)),
             "Specify arguments to pass to the executable")
+    ;
+    general.add_options()
         ("input-file,f", po::value< vector<string> >(&(opts->inputs)),
             "Specify one or more input files")
         ("output-file,F", po::value< vector<string> >(&(opts->outputs)),
@@ -186,7 +189,7 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
             "Specify the maximum width of a line for a better"
             " formatted timing report")
     ;
-    all.add(general).add(testing).add(timing);
+    all.add(program).add(general).add(testing).add(timing);
     p_desc.add("program", 1);
     p_desc.add("arg", -1);
     try {
@@ -194,32 +197,32 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
                   options(all).positional(p_desc).run(), args);
         po::notify(args);
     } catch (exception &err) {
-        if (!args.count("help") && !args.count("help-detailed")
-            && !args.count("help-testing") && !args.count("help-timing")
-            && !args.count("version")) {
+        if (!args.count("help") && !args.count("version")) {
             cerr << "Error in arguments: " << err.what() << endl;
             cerr << "(For help, use the --help or -h options)" << endl;
             exit(1);
         }
     }
-    if (args.count("help-detailed")) {
-        cout << USAGE_INFORMATION << endl;
-        cout << all;
-        exit(0);
-    }
-    if (args.count("help-testing")) {
-        cout << USAGE_INFORMATION << endl;
-        cout << testing;
-        exit(0);
-    }
-    if (args.count("help-timing")) {
-        cout << USAGE_INFORMATION << endl;
-        cout << timing;
-        exit(0);
-    }
     if (args.count("help")) {
         cout << USAGE_INFORMATION << endl;
-        cout << general;
+        string type = args["help"].as<string>();
+        if (type == "general") {
+            cout << general;
+        } else if (type == "program") {
+            cout << program;
+        } else if (type == "testing") {
+            cout << testing;
+        } else if (type == "timing") {
+            cout << timing;
+        } else if (type == "all") {
+            cout << all;
+        } else {
+            cout << DESCRIPTION << endl;
+            cout << program;
+            cout << "For more information on available options, "
+                 << "run help with an argument:" << endl
+                 << "    --help [program/general/testing/timing/all]" << endl;
+        }
         exit(0);
     }
     if (args.count("version")) {
@@ -285,22 +288,6 @@ char **vector_to_argv(string name, vector<string> *vect)
         argv[i] = temp_vect[i];
     }
     return argv;
-}
-
-void print_results(ProgramInfo results)
-{
-    double wall =  (double)results.wall_sec
-                    + ((double)results.wall_usec / 1000000.0);
-    double user = (double) results.user_sec
-                    + ((double)results.user_usec / 1000000.0);
-    double sys  = (double) results.sys_sec
-                    + ((double)results.sys_usec  / 1000000.0);
-    cout.precision(4);
-    cout.setf( std::ios::fixed, std:: ios::floatfield );
-    cout << "Wall: " << wall << endl;
-    cout << "User: " << user << endl;
-    cout << "Sys:  " << sys  << endl;
-    cout << "Exit code: " << results.exit_code << endl;
 }
 
 
@@ -375,15 +362,16 @@ void evaluate(string name, vector<string> args,
     namespace fs = boost::filesystem;
     vector<TimeSet> results;
     unsigned len = inputs.size();
+    if (len != outputs.size()) {
+        throw string("differing amounts of inputs and outputs");
+    }
+    char **argv = vector_to_argv(name, &args);
     unsigned successful = 0;
     string temp_input = fs::temp_directory_path().native()
                             + fs::unique_path().native() + ".eval";
     fclose(fopen(temp_input.c_str(), "w"));  // Make new, empty file
     string temp_output = fs::temp_directory_path().native()
                             + fs::unique_path().native() + ".eval";
-    if (len != outputs.size()) {
-        throw string("differing amounts of inputs and outputs");
-    }
     for (unsigned i = 0; i < len; ++i) {
         TimeSet these_tests;
         for (unsigned j = 0; j < opts->times; ++j) {
@@ -405,8 +393,7 @@ void evaluate(string name, vector<string> args,
                 cout.flush();
             }
             try {
-                these_tests.runs.push_back(execute_process(name,
-                                                vector_to_argv(name, &args),
+                these_tests.runs.push_back(execute_process(name, argv,
                                                 input_file, temp_output, "",
                                                 opts->max_cpu,
                                                 opts->max_real));
