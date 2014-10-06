@@ -41,6 +41,26 @@ static void set_signal_handler()
     sigaction(SIGALRM, &sact, NULL);
 }
 
+static ProgramInfo set_ptime(rusage r, timeval before, timeval after)
+{
+    ProgramInfo r_val;
+    r_val.user_sec  = r.ru_utime.tv_sec;
+    r_val.user_usec = r.ru_utime.tv_usec;
+    r_val.sys_sec   = r.ru_stime.tv_sec;
+    r_val.sys_usec  = r.ru_stime.tv_usec;
+    r_val.wall_sec  = after.tv_sec - before.tv_sec;
+    r_val.wall_usec = after.tv_usec - before.tv_usec;
+    /*  When subtracting, if the usecond's place of the minuand is less than
+     *  that of the subtrahand, carry from the second's place to the
+     *  usecond's place.
+     */
+    if (before.tv_usec > after.tv_usec) {
+        --(r_val.wall_sec);
+        r_val.wall_usec += 1000000;
+    }
+    return r_val;
+}
+
 
 
 ProgramInfo execute_process(string name, char *argv[],
@@ -52,8 +72,8 @@ ProgramInfo execute_process(string name, char *argv[],
     rlimit time_limit;
     rusage time_taken;
     ProgramInfo r_val;
-    set_signal_handler();
 
+    set_signal_handler();
     gettimeofday(&before, NULL);
     if ((child_id = fork())) {
         if (child_id < 0) throw string("could not open process");
@@ -64,17 +84,7 @@ ProgramInfo execute_process(string name, char *argv[],
             throw string("process terminated by signal number ")
                 + boost::lexical_cast<string>(WTERMSIG(exit_status));
         }
-        r_val.user_sec  = time_taken.ru_utime.tv_sec;
-        r_val.user_usec = time_taken.ru_utime.tv_usec;
-        r_val.sys_sec   = time_taken.ru_stime.tv_sec;
-        r_val.sys_usec  = time_taken.ru_stime.tv_usec;
-        r_val.wall_sec  = after.tv_sec - before.tv_sec;
-        if (before.tv_usec > after.tv_usec) {
-            --(r_val.wall_sec);
-            r_val.wall_usec = 1000000 + after.tv_usec - before.tv_usec;
-        } else {
-            r_val.wall_usec = after.tv_usec - before.tv_usec;
-        }
+        r_val = set_ptime(time_taken, before, after);
     } else {
         if (input != NULL) {
             dup2(fileno(input), STDIN_FILENO);
