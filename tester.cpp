@@ -12,7 +12,7 @@
  *   - Allow for more detailed error reporting by a more sophisticated       *
  *     file comparison algorithm.  It could be useful to report, e.g., a     *
  *     range of lines that failed, if the entire file didn't.  Or perhaps    *
- *     calculating something like what percentage matched.                   *\
+ *     calculating something like what percentage matched.                   *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <boost/lexical_cast.hpp>
@@ -74,7 +74,7 @@ static string readable_char(char c)
 
 string Tester::run_verbosely()
 {
-    string succ = on_success ? "Passed\n" : "";
+    string succ = on_success ? "Passed" : "";
     ifstream bench(benchmark_file.c_str());
     ifstream comp(comparison_file.c_str());
     int col = 0;
@@ -90,7 +90,7 @@ string Tester::run_verbosely()
                 return "Expected no output, got "
                     + readable_char(c_char)
                     + " on line " + boost::lexical_cast<string>(line)
-                    + " col " + boost::lexical_cast<string>(col) + "\n";
+                    + " col " + boost::lexical_cast<string>(col);
             } else {
                 return succ;
             }
@@ -100,7 +100,7 @@ string Tester::run_verbosely()
         b_char = get_next_char(bench);
         if (!bench.eof()) {
             return "Expected " + readable_char(b_char)
-                + ", got no output\n";
+                + ", got no output";
         } else {
             return succ;
         }
@@ -114,7 +114,7 @@ string Tester::run_verbosely()
             return "Expected " + readable_char(b_char)
                 + ", got " + readable_char(c_char)
                 + " on line " + boost::lexical_cast<string>(line)
-                + " col " + boost::lexical_cast<string>(col) + "\n";
+                + " col " + boost::lexical_cast<string>(col);
         }
         if (b_char == '\n') {
             ++line;
@@ -128,13 +128,13 @@ string Tester::run_verbosely()
         return "Got more output than expected: did not expect "
             + readable_char(c_char) + " on line "
             + boost::lexical_cast<string>(line) + " col "
-            + boost::lexical_cast<string>(col) + "\n";
+            + boost::lexical_cast<string>(col);
     }
     if (comp.eof() && !bench.eof()) {
         return "Got less output than expected: expected additional "
             + readable_char(b_char) + " on line "
             + boost::lexical_cast<string>(line) + " col "
-            + boost::lexical_cast<string>(col) + "\n";
+            + boost::lexical_cast<string>(col);
     }
     return succ;
 }

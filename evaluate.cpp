@@ -21,7 +21,6 @@
  *   - Add options to be more specific about the headers for timing.         *
  *   - Add options to save the output of a test somewhere.  Give a directory *
  *     and specify saving all files or just failed files.                    *
- *   - Add option to display exit codes of each test (or just failed tests)  *
  *   - Break up evaluate() into functions, reduce repetition.                *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
@@ -36,7 +35,7 @@ using namespace std;
 
 
 const string VERSION_INFORMATION =
-    "Evaluate v1.3.0\n"
+    "Evaluate v1.3.1\n"
     "Copyright (C) 2014 Colin B Hamilton\n"
     "This is free software: you are free to change and redistribute it.\n"
     "There is NO WARRANTY, to the extent permitted by law.";
