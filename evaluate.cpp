@@ -22,6 +22,7 @@
  *   - Add options to save the output of a test somewhere.  Give a directory *
  *     and specify saving all files or just failed files.                    *
  *   - Add option to display exit codes of each test (or just failed tests)  *
+ *   - Break up evaluate() into functions, reduce repetition.                *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -61,6 +62,7 @@ struct ProgramOptions {
     bool just_time;
     bool be_quiet;
     bool be_verbose;
+    bool print_ec;
     bool all_tests;
     bool all_times;
     bool avg_time;
@@ -161,19 +163,21 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
             "Run verbosely, reporting detailed results of all tests")
         ("all-tests,a", po::bool_switch(&(opts->all_tests)),
             "Report results of all tests, not just the first")
+        ("ignore-space,i", po::bool_switch(&(opts->ignore_space)),
+            "Ignore whitespace when testing program's output")
+        ("ignore,I", po::value<string>(&(opts->ignore_chars)),
+            "Specify a string containing characters to ignore "
+            "when testing program's output")
+        ("exit-code,C", po::bool_switch(&(opts->print_ec)),
+            "Report the exit code for processes")
+    ;
+    timing.add_options()
         ("max-cpu,c", po::value<unsigned>(&(opts->max_cpu))
                             ->default_value(0),
             "Set a CPU time limit for each test in seconds (0 for no limit)")
         ("max-real,r", po::value<unsigned>(&(opts->max_real))
                             ->default_value(0),
             "Set a real-time limit for each test in seconds (0 for no limit)")
-        ("ignore-space,i", po::bool_switch(&(opts->ignore_space)),
-            "Ignore whitespace when testing program's output")
-        ("ignore,I", po::value<string>(&(opts->ignore_chars)),
-            "Specify a string containing characters to ignore "
-            "when testing program's output")
-    ;
-    timing.add_options()
         ("precision,p", po::value<unsigned>(&(opts->time_precision))
                             ->default_value(4),
             "Set decimal precision for timing output")
@@ -403,8 +407,12 @@ void evaluate(string name, vector<string> args,
                     if (opts->be_quiet) {
                         if (!tes.run()) {
                             cout << "Failed on input "
-                                 << input_name
-                                 << endl;
+                                 << input_name;
+                            if (opts->print_ec) {
+                                cout << " with exit code "
+                                     << these_tests.runs.back().exit_code;
+                            }
+                            cout << endl;
                         } else {
                             ++successful;
                         }
@@ -412,13 +420,21 @@ void evaluate(string name, vector<string> args,
                         string result = tes.run_verbosely();
                         if (result != "") {
                             cout << ">> " << result;
+                            if (opts->print_ec) {
+                                cout << endl << ">> exit code: "
+                                     << these_tests.runs.back().exit_code;
+                            }
                         } else {
                             ++successful;
                             if (opts->be_verbose) {
                                 cout << "> Passed";
+                                if (opts->print_ec) {
+                                    cout << " with exit code "
+                                         << these_tests.runs.back().exit_code;
+                                }
                             }
-                            cout << endl;
                         }
+                        cout << endl;
                     }
                 }
             } catch (string err) {

@@ -85,6 +85,7 @@ ProgramInfo execute_process(string name, char *argv[],
                 + boost::lexical_cast<string>(WTERMSIG(exit_status));
         }
         r_val = set_ptime(time_taken, before, after);
+        r_val.exit_code = exit_status;
     } else {
         if (input != NULL) {
             dup2(fileno(input), STDIN_FILENO);
