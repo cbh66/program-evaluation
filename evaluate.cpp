@@ -21,7 +21,6 @@
  *   - Add options to be more specific about the headers for timing.         *
  *   - Add options to save the output of a test somewhere.  Give a directory *
  *     and specify saving all files or just failed files.                    *
- *   - Break up evaluate() into functions, reduce repetition.                *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -44,7 +43,8 @@ const string DESCRIPTION =
     "Evaluate:  A program for testing and timing other programs";
 
 const string USAGE_INFORMATION =
-    "Usage: evaluate [options] executable";
+    "Usage: evaluate [options] executable\n"
+    "Or:    evaluate [options] -- executable arguments";
 
 struct ProgramOptions {
     string program_name;
@@ -76,14 +76,21 @@ struct ProgramOptions {
 
 void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts);
 void verify_args(ProgramOptions *opts);
+void get_io(vector<string> &inputs, vector<string> &outputs, string input_dir,
+            string output_dir, string input_suffix, string output_suffix);
 
 char **vector_to_argv(string name, vector<string> *vect);
 void evaluate(string name, vector<string> args,
               vector<string> inputs, vector<string> outputs,
               ProgramOptions *opts,
               Timer &tim, Tester &tes);
-void get_io(vector<string> &inputs, vector<string> &outputs, string input_dir,
-            string output_dir, string input_suffix, string output_suffix);
+string make_temp_file();
+void run_one_test(string name, char **argv, string in, string temp_in,
+                  string out, string temp_out,
+                  vector<ProgramInfo> &result_list, ProgramOptions *opts,
+                  bool print_test, unsigned &successful, Tester &tes);
+void report_test_results(Tester &tes, string input_name, int exit_code,
+                         ProgramOptions *opts, unsigned &successful);
 
 int main(int argc, char *argv[])
 {
@@ -357,6 +364,88 @@ void get_io(vector<string> &inputs, vector<string> &outputs, string input_dir,
 }
 
 
+void report_test_results(Tester &tes, string input_name, int exit_code,
+                         ProgramOptions *opts, unsigned &successful)
+{
+    if (opts->be_quiet) {
+        if (!tes.run()) {
+            cout << "Failed on input " << input_name;
+            if (opts->print_ec) {
+                cout << " with exit code " << exit_code;
+            }
+            cout << endl;
+        } else {
+            ++successful;
+        }
+    } else {
+        string result = tes.run_verbosely();
+        if (result != "") {
+            cout << ">> " << result;
+            if (opts->print_ec) {
+                cout << endl << ">> exit code: " << exit_code;
+            }
+        } else {
+            ++successful;
+            if (opts->be_verbose) {
+                cout << "> Passed";
+                if (opts->print_ec) {
+                    cout << " with exit code " << exit_code;
+                }
+            }
+        }
+        cout << endl;
+    }
+}
+
+
+string make_temp_file()
+{
+    namespace fs = boost::filesystem;
+    string r_val = fs::temp_directory_path().native()
+                 + fs::unique_path().native() + ".eval";
+    fclose(fopen(r_val.c_str(), "w"));
+    return r_val;
+}
+
+
+void run_one_test(string name, char **argv, string in, string temp_in,
+                  string out, string temp_out,
+                  vector<ProgramInfo> &result_list, ProgramOptions *opts,
+                  bool print_test, unsigned &successful, Tester &tes)
+{
+    namespace fs = boost::filesystem;
+    ProgramInfo result;
+    string input_name, input_file;
+    if (in == "") {
+        input_name = "/no input/";
+        input_file = temp_in;
+    } else if (in == "--") {
+        input_name = "/stdin/";
+        input_file = "";
+    } else {
+        input_name = fs::path(in).filename().native();
+        input_file = in;
+    }
+    if (!opts->be_quiet) {
+        cout << "On input " << input_name << endl;
+        cout.flush();
+    }
+    try {
+        result = execute_process(name, argv, input_file, temp_out, "",
+                                 opts->max_cpu, opts->max_real);
+        result_list.push_back(result);
+        if (print_test) {
+            tes.set_benchmark_file(out).set_comparison_file(temp_out);
+            report_test_results(tes, input_name, result.exit_code,
+                                opts, successful);
+        }
+    } catch (string err) {
+        if (opts->be_quiet) cout << "On input " << input_name;
+        cout << ">>> Error: " << err << endl;
+    }
+}
+
+
 void evaluate(string name, vector<string> args,
               vector<string> inputs, vector<string> outputs,
               ProgramOptions *opts,
@@ -370,81 +459,20 @@ void evaluate(string name, vector<string> args,
     }
     char **argv = vector_to_argv(name, &args);
     unsigned successful = 0;
-    string temp_input = fs::temp_directory_path().native()
-                            + fs::unique_path().native() + ".eval";
-    fclose(fopen(temp_input.c_str(), "w"));  // Make new, empty file
-    string temp_output = fs::temp_directory_path().native()
-                            + fs::unique_path().native() + ".eval";
+    string temp_input = make_temp_file();
+    string temp_output = make_temp_file();
     for (unsigned i = 0; i < len; ++i) {
         TimeSet these_tests;
+        these_tests.input_file = inputs[i];
+        these_tests.output_file = outputs[i];
+        these_tests.test_name = fs::path(inputs[i]).filename().native();
         for (unsigned j = 0; j < opts->times; ++j) {
-            string input_name, input_file;
-            
-            if (inputs[i] == "") {
-                input_name = "/no input/";
-                input_file = temp_input;
-            }
-            else if (input_name == "--") {
-                input_name = "/stdin/";
-                input_file = "";
-            } else {
-                input_name = fs::path(inputs[i]).filename().native();
-                input_file = inputs[i];
-            }
-            if (!opts->be_quiet) {
-                cout << "On input " << input_name << endl;
-                cout.flush();
-            }
-            try {
-                these_tests.runs.push_back(execute_process(name, argv,
-                                                input_file, temp_output, "",
-                                                opts->max_cpu,
-                                                opts->max_real));
-                if (opts->just_test && (opts->all_tests || j == 0)) {
-                    tes.set_benchmark_file(outputs[i])
-                       .set_comparison_file(temp_output);
-                    if (opts->be_quiet) {
-                        if (!tes.run()) {
-                            cout << "Failed on input "
-                                 << input_name;
-                            if (opts->print_ec) {
-                                cout << " with exit code "
-                                     << these_tests.runs.back().exit_code;
-                            }
-                            cout << endl;
-                        } else {
-                            ++successful;
-                        }
-                    } else {
-                        string result = tes.run_verbosely();
-                        if (result != "") {
-                            cout << ">> " << result;
-                            if (opts->print_ec) {
-                                cout << endl << ">> exit code: "
-                                     << these_tests.runs.back().exit_code;
-                            }
-                        } else {
-                            ++successful;
-                            if (opts->be_verbose) {
-                                cout << "> Passed";
-                                if (opts->print_ec) {
-                                    cout << " with exit code "
-                                         << these_tests.runs.back().exit_code;
-                                }
-                            }
-                        }
-                        cout << endl;
-                    }
-                }
-            } catch (string err) {
-                if (opts->be_quiet) cout << "On input " << input_name;
-                cout << ">>> Error: " << err << endl;
-            }
+            run_one_test(name, argv, inputs[i], temp_input,
+                         outputs[i], temp_output, these_tests.runs, opts,
+                         opts->just_test && (opts->all_tests || j == 0),
+                         successful, tes);
         }
         results.push_back(these_tests);
-        results.back().input_file = inputs[i];
-        results.back().output_file = outputs[i];
-        results.back().test_name = fs::path(inputs[i]).filename().native();
     }
     if (opts->just_test) {
         cout << "Final: Passed (" << successful << "/" << len << ")" << endl;
