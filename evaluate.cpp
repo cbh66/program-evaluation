@@ -19,8 +19,6 @@
  *                                                                           *
  *  TO DO:                                                                   *
  *   - Add options to be more specific about the headers for timing.         *
- *   - Add options to save the output of a test somewhere.  Give a directory *
- *     and specify saving all files or just failed files.                    *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -34,7 +32,7 @@ using namespace std;
 
 
 const string VERSION_INFORMATION =
-    "Evaluate v1.3.1\n"
+    "Evaluate v1.3.2\n"
     "Copyright (C) 2014 Colin B Hamilton\n"
     "This is free software: you are free to change and redistribute it.\n"
     "There is NO WARRANTY, to the extent permitted by law.";
@@ -53,6 +51,8 @@ struct ProgramOptions {
     vector<string> outputs;
     string input_dir;
     string output_dir;
+    string copy_dir;
+    string copy_suffix;
     string input_suffix;
     string output_suffix;
     string timer_header;
@@ -66,6 +66,8 @@ struct ProgramOptions {
     bool all_times;
     bool avg_time;
     bool ignore_space;
+    bool cp_fail;
+    bool cp_all;
     unsigned times;
     unsigned max_cpu;
     unsigned max_real;
@@ -85,11 +87,13 @@ void evaluate(string name, vector<string> args,
               ProgramOptions *opts,
               Timer &tim, Tester &tes);
 string make_temp_file();
+void copy_output(string source, string dest_dir, string dest_ext,
+                 string dest_name, bool print);
 void run_one_test(string name, char **argv, string in, string temp_in,
                   string out, string temp_out,
                   vector<ProgramInfo> &result_list, ProgramOptions *opts,
                   bool print_test, unsigned &successful, Tester &tes);
-void report_test_results(Tester &tes, string input_name, int exit_code,
+bool report_test_results(Tester &tes, string input_name, int exit_code,
                          ProgramOptions *opts, unsigned &successful);
 
 int main(int argc, char *argv[])
@@ -176,6 +180,14 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
             "when testing program's output")
         ("exit-code,C", po::bool_switch(&(opts->print_ec)),
             "Report the exit code for processes")
+        ("copy-failed,y", po::bool_switch(&(opts->cp_fail)),
+            "Save outputs of failed tests")
+        ("copy-all,Y", po::bool_switch(&(opts->cp_all)),
+            "Save outputs of all tests")
+        ("copy-dir,p", po::value<string>(&(opts->copy_dir)),
+            "Specify a directory in which to save copies of test output")
+        ("copy-ext,P", po::value<string>(&(opts->copy_suffix)),
+            "Specify a suffix (eg. an extension) to identify output copies")
     ;
     timing.add_options()
         ("max-cpu,c", po::value<unsigned>(&(opts->max_cpu))
@@ -254,6 +266,16 @@ void verify_args(ProgramOptions *opts)
     if (opts->be_quiet && opts->be_verbose) {
         cerr << "Error in arguments: cannot be both quiet and loud!" << endl;
         exit(1);
+    }
+    if (opts->cp_fail || opts->cp_all &&
+        (opts->copy_dir == "" || opts->copy_suffix == "")) {
+        cerr << "To copy test outputs, please specify a directory or "
+             << "extension for the copied files" << endl;
+        exit(1);
+    }
+    if (!(opts->cp_fail) && !(opts->cp_all) &&
+        (opts->copy_dir != "" || opts->copy_suffix != "")) {
+        opts->cp_fail = true;
     }
     unsigned in_size = opts->inputs.size();
     unsigned out_size = opts->outputs.size();
@@ -364,9 +386,10 @@ void get_io(vector<string> &inputs, vector<string> &outputs, string input_dir,
 }
 
 
-void report_test_results(Tester &tes, string input_name, int exit_code,
+bool report_test_results(Tester &tes, string input_name, int exit_code,
                          ProgramOptions *opts, unsigned &successful)
 {
+    bool passed = false;
     if (opts->be_quiet) {
         if (!tes.run()) {
             cout << "Failed on input " << input_name;
@@ -375,7 +398,7 @@ void report_test_results(Tester &tes, string input_name, int exit_code,
             }
             cout << endl;
         } else {
-            ++successful;
+            passed = true;
         }
     } else {
         string result = tes.run_verbosely();
@@ -384,17 +407,20 @@ void report_test_results(Tester &tes, string input_name, int exit_code,
             if (opts->print_ec) {
                 cout << endl << ">> exit code: " << exit_code;
             }
+            if (result == "Passed") passed = true;
         } else {
-            ++successful;
             if (opts->be_verbose) {
                 cout << "> Passed";
                 if (opts->print_ec) {
                     cout << " with exit code " << exit_code;
                 }
             }
+            passed = true;
         }
         cout << endl;
     }
+    successful += passed;
+    return passed;
 }
 
 
@@ -405,6 +431,20 @@ string make_temp_file()
                  + fs::unique_path().native() + ".eval";
     fclose(fopen(r_val.c_str(), "w"));
     return r_val;
+}
+
+
+void copy_output(string source, string dest_dir, string dest_ext,
+                 string dest_name, bool print)
+{
+    namespace fs = boost::filesystem;
+    if ((dest_dir == "" && dest_ext == "") || dest_name == "") return;
+    fs::path destination = (dest_dir == "") ? fs::current_path() : dest_dir;
+    destination /= dest_name + dest_ext;
+    fs::copy_file(source, destination, fs::copy_option::overwrite_if_exists);
+    if (print) {
+        cout << "Output copied to " << destination.native() << endl;
+    }
 }
 
 
@@ -436,8 +476,16 @@ void run_one_test(string name, char **argv, string in, string temp_in,
         result_list.push_back(result);
         if (print_test) {
             tes.set_benchmark_file(out).set_comparison_file(temp_out);
-            report_test_results(tes, input_name, result.exit_code,
-                                opts, successful);
+            bool good = report_test_results(tes, input_name, result.exit_code,
+                                            opts, successful);
+            if (opts->cp_all || (!good && opts->cp_fail)) {
+                string output_name = (input_name == "/stdin/"
+                                      || input_name == "")
+                                   ? fs::path(out).filename().native()
+                                   : input_name;
+                copy_output(temp_out, opts->copy_dir, opts->copy_suffix,
+                            output_name, opts->be_verbose);
+            }
         }
     } catch (string err) {
         if (opts->be_quiet) cout << "On input " << input_name;
