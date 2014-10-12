@@ -18,6 +18,7 @@
  *    modules.                                                               *
  *                                                                           *
  *  TO DO:                                                                   *
+ *   - Move much of this file into a separate module                         *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -79,7 +80,7 @@ struct ProgramOptions {
 
 void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts);
 void verify_args(ProgramOptions *opts);
-string unescape(const string& s);
+string unescape(string s, char control = '\\');
 void get_io(vector<string> &inputs, vector<string> &outputs, string input_dir,
             string output_dir, string input_suffix, string output_suffix);
 
@@ -262,6 +263,14 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
 }
 
 
+/*  verify_args()
+ *  Examines the options that have been set in the structure pointed to by
+ *  opts.  In the case of invalid settings, either
+ *   1)  Changes some settings to ones that make more sense in context,
+ *       specifically changing -unset- settings to -defaults-; or
+ *   2)  Where this is impossible, or a contradiction has been specified,
+ *       an error is reported and the program is ended.
+ */
 void verify_args(ProgramOptions *opts)
 {
     if (!opts->just_test && !opts->just_time) {
@@ -304,14 +313,21 @@ void verify_args(ProgramOptions *opts)
     opts->timing_footer = unescape(opts->timing_footer);
 }
 
-string unescape(const string& s)
+
+/*  unescape()
+ *  Takes a string that may have control characters written with a preceding
+ *  backslash (ie. "\\b"), for example, reading user input from cin or the
+ *  command line, where control characters must be written as two characters.
+ *  Returns a string with these sequences replace by the actual characters.
+ */
+string unescape(string s, char control)
 {
     string result;
-    string::const_iterator it = s.begin();
+    string::iterator it = s.begin();
     while (it != s.end())
     {
         char c = *it++;
-        if (c == '\\' && it != s.end()) {
+        if (c == control && it != s.end()) {
             switch (*it++) {
             case 'a':  c = '\a'; break;
             case 'b':  c = '\b'; break;
@@ -321,7 +337,7 @@ string unescape(const string& s)
             case 't':  c = '\t'; break;
             case 'v':  c = '\v'; break;
             case '0':  c = '\0'; break;
-            case '\\': c = '\\'; break;
+            case control: c = control; break;
             default:
                 c = *(it - 1);
             }
@@ -359,6 +375,16 @@ char **vector_to_argv(string name, vector<string> *vect)
 }
 
 
+/*  get_files_by_suffix()
+ *  Given an output vector, a directory, and a suffix to search for, adds
+ *  all files of the form
+ *      dir/*suffix       where * means wildcard
+ *  to the output vector.
+ *  Note that each path pushed is the path MINUS THE SUFFIX.  This is to aid
+ *  in finding matches between files whose names are perfect matches aside
+ *  from the suffix.  It is simple enough to add the suffix back, should a
+ *  user wish to do so.
+ */
 void get_files_by_suffix(vector<boost::filesystem::path> &output,
                          string dir, string suffix)
 {
@@ -383,6 +409,16 @@ void get_files_by_suffix(vector<boost::filesystem::path> &output,
 }
 
 
+/*  get_io()
+ *  Given a vector for inputs and one for outputs, and directories and
+ *  suffixes identifying each, adds corresponding files to each vector.
+ *  "Corresponding" means having the same "filename" - the part of a file's
+ *  path not including its directory and its suffix.  So, eg.
+ *   input_dir/F.input_ext  matches  output_dir/F.output_ext
+ *  because "F" == "F"
+ *  Where a file is found without a match, the empty string is added as that
+ *  output's "match".
+ */
 void get_io(vector<string> &inputs, vector<string> &outputs, string input_dir,
             string output_dir, string input_suffix, string output_suffix)
 {
@@ -422,6 +458,12 @@ void get_io(vector<string> &inputs, vector<string> &outputs, string input_dir,
 }
 
 
+/*  report_test_results()
+ *  Uses the provided Tester to print the results of running input_name.
+ *  Uses opts to decide how to print, and will update successful if it was.
+ *  Note: specify the Tester's comparison and benchmark files BEFORE calling
+ *  this function.
+ */
 bool report_test_results(Tester &tes, string input_name, int exit_code,
                          ProgramOptions *opts, unsigned &successful)
 {
@@ -460,6 +502,10 @@ bool report_test_results(Tester &tes, string input_name, int exit_code,
 }
 
 
+/*  make_temp_file()
+ *  Creates a new temporary file, and returns a string specifying its path.
+ *  It is the client's responsibility to remove this file.
+ */
 string make_temp_file()
 {
     namespace fs = boost::filesystem;
@@ -470,6 +516,11 @@ string make_temp_file()
 }
 
 
+/*  copy_output()
+ *  Copies the file from the path source, to a new path, specified by the
+ *  three dest_ parameters.  The final parameter specifies whether to print
+ *  upon successful copying.
+ */
 void copy_output(string source, string dest_dir, string dest_ext,
                  string dest_name, bool print)
 {
@@ -484,6 +535,12 @@ void copy_output(string source, string dest_dir, string dest_ext,
 }
 
 
+/*  run_one_test()
+ *  Given information about a process to run, runs a single test.
+ *  If print_test is true, prints the results and updates successful.
+ *  If the program runs without an error, the results are pushed onto
+ *  result_list.  Otherwise, the error is reported.
+ */
 void run_one_test(string name, char **argv, string in, string temp_in,
                   string out, string temp_out,
                   vector<ProgramInfo> &result_list, ProgramOptions *opts,
@@ -530,6 +587,10 @@ void run_one_test(string name, char **argv, string in, string temp_in,
 }
 
 
+/*  evaluate()
+ *  Runs the specified program on specified outputs using the specified
+ *  options.
+ */
 void evaluate(string name, vector<string> args,
               vector<string> inputs, vector<string> outputs,
               ProgramOptions *opts,
@@ -567,4 +628,3 @@ void evaluate(string name, vector<string> args,
     fs::remove(temp_input);
     fs::remove(temp_output);
 }
-
