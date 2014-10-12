@@ -18,7 +18,6 @@
  *    modules.                                                               *
  *                                                                           *
  *  TO DO:                                                                   *
- *   - Add options to be more specific about the headers for timing.         *
 \*---------------------------------------------------------------------------*/
 #include <iostream>
 #include <fstream>
@@ -32,7 +31,7 @@ using namespace std;
 
 
 const string VERSION_INFORMATION =
-    "Evaluate v1.3.2\n"
+    "Evaluate v1.3.3\n"
     "Copyright (C) 2014 Colin B Hamilton\n"
     "This is free software: you are free to change and redistribute it.\n"
     "There is NO WARRANTY, to the extent permitted by law.";
@@ -57,6 +56,8 @@ struct ProgramOptions {
     string output_suffix;
     string timer_header;
     string ignore_chars;
+    string timing_header;
+    string timing_footer;
     bool just_test;
     bool just_time;
     bool be_quiet;
@@ -78,6 +79,7 @@ struct ProgramOptions {
 
 void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts);
 void verify_args(ProgramOptions *opts);
+string unescape(const string& s);
 void get_io(vector<string> &inputs, vector<string> &outputs, string input_dir,
             string output_dir, string input_suffix, string output_suffix);
 
@@ -112,7 +114,8 @@ int main(int argc, char *argv[])
         tim.report_only_avg();
     }
     tim.precision_after_decimal(opts.time_precision).spacing(opts.spacing)
-       .line_width(opts.max_width);
+       .line_width(opts.max_width).set_header(opts.timing_header)
+       .set_footer(opts.timing_footer);
 
     get_io(opts.inputs, opts.outputs, opts.input_dir, opts.output_dir,
            opts.input_suffix, opts.output_suffix);
@@ -190,10 +193,10 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
             "Specify a suffix (eg. an extension) to identify output copies")
     ;
     timing.add_options()
-        ("max-cpu,c", po::value<unsigned>(&(opts->max_cpu))
+        ("max-cpu,x", po::value<unsigned>(&(opts->max_cpu))
                             ->default_value(0),
             "Set a CPU time limit for each test in seconds (0 for no limit)")
-        ("max-real,r", po::value<unsigned>(&(opts->max_real))
+        ("max-real,X", po::value<unsigned>(&(opts->max_real))
                             ->default_value(0),
             "Set a real-time limit for each test in seconds (0 for no limit)")
         ("precision,p", po::value<unsigned>(&(opts->time_precision))
@@ -210,6 +213,10 @@ void parse_command_line_args(int argc, char *argv[], ProgramOptions *opts)
                             ->default_value(80),
             "Specify the maximum width of a line for a better"
             " formatted timing report")
+        ("header,r", po::value<string>(&(opts->timing_header)),
+            "Specify a header for each item in timing report")
+        ("footer,R", po::value<string>(&(opts->timing_footer)),
+            "Specify a footer for each item in timing report")
     ;
     all.add(program).add(general).add(testing).add(timing);
     p_desc.add("program", 1);
@@ -293,6 +300,35 @@ void verify_args(ProgramOptions *opts)
             exit(1);
         }
     }
+    opts->timing_header = unescape(opts->timing_header);
+    opts->timing_footer = unescape(opts->timing_footer);
+}
+
+string unescape(const string& s)
+{
+    string result;
+    string::const_iterator it = s.begin();
+    while (it != s.end())
+    {
+        char c = *it++;
+        if (c == '\\' && it != s.end()) {
+            switch (*it++) {
+            case 'a':  c = '\a'; break;
+            case 'b':  c = '\b'; break;
+            case 'f':  c = '\f'; break;
+            case 'n':  c = '\n'; break;
+            case 'r':  c = '\r'; break;
+            case 't':  c = '\t'; break;
+            case 'v':  c = '\v'; break;
+            case '0':  c = '\0'; break;
+            case '\\': c = '\\'; break;
+            default:
+                c = *(it - 1);
+            }
+        }
+        result += c;
+    }
+    return result;
 }
 
 

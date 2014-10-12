@@ -62,8 +62,7 @@ void Timer::report_run(ProgramInfo result)
         (*output) << "s" << endl << endl;
 }
 
-//  Move out priting of the average.  Instead, have it return the
-//    running total and then the caller can calculate the average.
+
 double Timer::print_line(const TimeSet times, int start, int end,
                          string seperator, string final,
                          double (*get_num)(ProgramInfo))
@@ -118,8 +117,10 @@ void Timer::report_runs(const TimeSet results)
     if (columns == 0) return;
     unsigned current_column = 0;
 
-    (*output) << make_header(results) << endl;
+    (*output) << before;
+    (*output) << make_header(results);
     while (current_column <= size) {
+        (*output) << endl;
         bool on_last_line = current_column + columns > size;
         (*output) << repeat_char(' ', 8);
         if (report_all_times) {
@@ -157,9 +158,10 @@ void Timer::report_runs(const TimeSet results)
             (*output) << setw(before_decimal + 1 + after_decimal)
                       << std::right << (sys_total / size) << "s";
         }
-        (*output) << endl << endl;
+        (*output) << endl;
         current_column += columns;
     }
+    (*output) << after << endl;
 }
 
 
@@ -178,6 +180,7 @@ void Timer::report_avg_alone(const TimeSet results)
     unsigned size = results.runs.size();
     if (size == 0) return;
 
+    (*output) << before;
     (*output) << make_header(results) << endl;
     (*output) << repeat_char(' ', 8);
     (*output) << "  AVG" << endl;
@@ -190,7 +193,7 @@ void Timer::report_avg_alone(const TimeSet results)
     (*output) << endl << "System: ";
     (*output) << setw(before_decimal + 1 + after_decimal)
               << std::right << average(results, get_sys) << "s";
-    (*output) << endl << endl;
+    (*output) << endl << after << endl;
 }
 
 void Timer::report_times(const vector<TimeSet> all_results)
@@ -258,6 +261,20 @@ Timer &Timer::spacing(unsigned n)
 Timer &Timer::set_output(ostream *stream)
 {
     output = stream;
+    return *this;
+}
+
+
+Timer &Timer::set_header(string head)
+{
+    before = head;
+    return *this;
+}
+
+
+Timer &Timer::set_footer(std::string foot)
+{
+    after = foot;
     return *this;
 }
 

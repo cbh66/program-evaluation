@@ -53,9 +53,12 @@ public:
     Timer &line_width(unsigned w);
     Timer &spacing(unsigned n);
     Timer &set_output(std::ostream *stream);
+    Timer &set_header(std::string head);
+    Timer &set_footer(std::string foot);
 
 private:
-    std::string header;
+    std::string before;
+    std::string after;
     bool report_avg;
     bool report_all_times;
     unsigned before_decimal;
