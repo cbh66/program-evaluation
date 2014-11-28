@@ -1,6 +1,6 @@
 
 PROGNAME=evaluate
-FILES=evaluate.cpp execute-process.cpp timer.cpp tester.cpp
+FILES=evaluate.cpp setup.cpp evaluator.cpp execute-process.cpp timer.cpp tester.cpp
 OBJS=$(FILES:.cpp=.o)
 CXX=g++
 CFLAGS=-c -Wall -Wextra -g

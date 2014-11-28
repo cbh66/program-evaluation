@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------*\
- *  timer.cpp                                                                *
+ *  tester.cpp                                                                *
  *  Written By: Colin Hamilton, Tufts University                             *
  *  This implementation depends on the iostream, fstream, vector, and        *
  *    boost/lexical_cast.hpp libraries.                                      *
@@ -18,6 +18,7 @@
 #include <boost/lexical_cast.hpp>
 #include "tester.h"
 using namespace std;
+
 
 Tester::Tester()
 {
